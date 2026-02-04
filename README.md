@@ -10,6 +10,12 @@ This is a powerful [Gemini CLI](https://github.com/google/gemini-cli) extension 
 - **⚡ Management**: Create, move, rename notes, and safely update YAML frontmatter without breaking formatting.
 - **🔍 Fuzzy Search**: Quickly find files by name or content.
 
+## Prerequisites
+
+- **Node.js**: v18 or higher.
+- **Gemini CLI**: The host application for this extension.
+- **Obsidian Vault**: A local folder containing your markdown notes.
+
 ## Installation
 
 1.  **Clone the repository**:
@@ -48,6 +54,12 @@ You can also set it explicitly via the tool:
 /run obsidian_set_vault path="/Users/you/Documents/MyVault"
 ```
 
+## Data Storage & Troubleshooting
+
+- **Vector Index**: The semantic search index is stored locally in a `.gemini-obsidian-lancedb` folder within the extension directory.
+- **Cache Reset**: If you suspect the index is corrupted or want a fresh start, you can manually delete the `.gemini-obsidian-lancedb` folder. The next time you run `/obsidian:index` or `obsidian_rag_index`, it will be recreated.
+- **Logs**: If you encounter issues, check the extension logs. Since this runs as an MCP server, errors are typically output to stderr.
+
 ## Commands
 
 The extension comes with pre-configured slash commands for common workflows:
@@ -58,6 +70,10 @@ The extension comes with pre-configured slash commands for common workflows:
 | `/obsidian:ask` | Ask a question to your vault using RAG (e.g., `/obsidian:ask "What did I learn about React?"`). |
 | `/obsidian:search` | Fuzzy search for files by name or content. |
 | `/obsidian:index` | Trigger a manual re-index of the vault for semantic search. |
+
+## Demo
+
+![demo.gif](docs/demo.gif)
 
 ## Available Tools
 
