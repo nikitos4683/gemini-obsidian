@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-02-05
+
+### Features
+- 5d36f61 FEAT: implement incremental vault indexing
+
 ## [1.0.4] - 2026-02-05
 
 ### Fixed

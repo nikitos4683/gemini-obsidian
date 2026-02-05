@@ -1,3 +1,15 @@
+# Release 1.1.0
+
+## Summary
+This release introduces incremental indexing for the Obsidian vault. Instead of re-indexing the entire vault on every note change, the extension now only re-indexes the specific file that was modified or created. This significantly improves performance and responsiveness.
+
+## New Features
+- **Incremental Indexing**: The `obsidian_rag_index` tool now accepts an optional `file_path` argument to re-index a single file.
+- **Enhanced Hooks**: The automated re-indexing hook now utilizes incremental indexing and triggers on frontmatter updates as well as note creation/append.
+
+## Bug Fixes
+- Addressed trailing whitespace issues in `src/rag/store.ts`.
+
 # Release 1.0.4
 
 ## Summary
