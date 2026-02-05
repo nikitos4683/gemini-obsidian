@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-02-05
+
+### Refactor
+- Bundle extension with esbuild to improve distribution
+- Switch from tsc to esbuild for building
+
+### Documentation
+- Revise installation steps and configuration options
+- Add demo section to README
+- Update README, add demo gif and repo updates
+
+### Dependencies
+- Bump @modelcontextprotocol/sdk to 1.26.0
+
 ## [1.0.0] - 2026-02-04
 
 ### Added
