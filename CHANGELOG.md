@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2026-02-05
+
+### Fixed
+- Use absolute path for LanceDB storage in the home directory to avoid issues with stale working directories.
+
 ## [1.0.3] - 2026-02-05
 
 ### Fixed
