@@ -60017,10 +60017,13 @@ Content: ${text}`;
 // src/index.ts
 try {
   require.resolve("@lancedb/lancedb");
+  require.resolve("onnxruntime-node");
 } catch (e) {
-  console.error('Error: Required dependency "@lancedb/lancedb" is missing.');
-  console.error('Please run "npm install" in the extension directory:');
-  console.error(path5.join(__dirname, ".."));
+  console.error("\n[Gemini Obsidian] Error: Required native dependencies are missing.");
+  console.error('This usually happens if "npm install" was not run or failed.');
+  console.error("Please run the following command in the extension directory:");
+  console.error(`  cd ${require("path").join(__dirname, "..")} && npm install
+`);
   process.exit(1);
 }
 var VAULT_PATH = process.env.OBSIDIAN_VAULT_PATH || null;

@@ -1,4 +1,17 @@
 #!/usr/bin/env node
+
+// 1. Defensive check for native dependencies (MUST be first)
+try {
+    require.resolve('@lancedb/lancedb');
+    require.resolve('onnxruntime-node');
+} catch (e) {
+    console.error('\n[Gemini Obsidian] Error: Required native dependencies are missing.');
+    console.error('This usually happens if "npm install" was not run or failed.');
+    console.error('Please run the following command in the extension directory:');
+    console.error(`  cd ${require('path').join(__dirname, '..')} && npm install\n`);
+    process.exit(1);
+}
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -13,16 +26,6 @@ import * as os from 'os';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 import { VaultIndexer } from './rag/store.js';
-
-// Defensive check for native dependencies that are externalized
-try {
-    require.resolve('@lancedb/lancedb');
-} catch (e) {
-    console.error('Error: Required dependency "@lancedb/lancedb" is missing.');
-    console.error('Please run "npm install" in the extension directory:');
-    console.error(path.join(__dirname, '..'));
-    process.exit(1);
-}
 
 let VAULT_PATH: string | null = process.env.OBSIDIAN_VAULT_PATH || null;
 const indexer = new VaultIndexer();

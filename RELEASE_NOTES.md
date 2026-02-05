@@ -1,15 +1,10 @@
-# Release 1.0.5
+# Release 1.0.6
 
 ## Summary
-This release focuses on robustness and self-containment. It fixes the "Connection closed" errors by properly bundling transformers and adds defensive checks for native dependencies.
+Fixed a critical bug where the extension would crash before it could report missing dependencies.
 
 ## Bug Fixes
-- **Bundling:** `@xenova/transformers` is now bundled into the main script. A shim for `import.meta.url` was added to resolve path issues in CommonJS.
-- **Diagnostics:** Added a startup check that detects if `@lancedb/lancedb` is missing from `node_modules` and provides clear instructions on how to fix it.
-- **Consistency:** LanceDB storage is now explicitly absolute (`~/.gemini-obsidian-lancedb`).
+- **Startup:** Moved the dependency check to the very top of the bundle. This ensures that if `@lancedb/lancedb` or `onnxruntime-node` are missing, the extension prints a clear error message instead of a stack trace.
 
-## Operations
-- Users may need to run `npm install` in the extension directory if they see the new "dependency missing" error.
-
-# Release 1.0.4
+# Release 1.0.5
 ...

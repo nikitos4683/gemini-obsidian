@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6] - 2026-02-05
+
+### Fixed
+- Move native dependency check to the absolute top of the bundle to prevent early crashes.
+- Improve error messages when dependencies are missing.
+
 ## [1.0.5] - 2026-02-05
 
 ### Fixed
