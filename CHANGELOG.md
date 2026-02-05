@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-02-05
+
+### Fixed
+- Fix MCP connection closed error by externalizing transformers and native dependencies in bundle.
+
 ## [1.0.1] - 2026-02-05
 
 ### Refactor

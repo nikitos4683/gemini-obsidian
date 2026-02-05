@@ -1,3 +1,12 @@
+# Release 1.0.2
+
+## Summary
+This release fixes a critical issue where the MCP server would fail to start due to a bundling error with `@xenova/transformers`.
+
+## Bug Fixes
+- Externalized `@xenova/transformers` in the `esbuild` bundle to avoid path resolution issues in CommonJS.
+- Verified MCP connection stability.
+
 # Release 1.0.1
 
 ## Summary
