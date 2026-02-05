@@ -1,12 +1,13 @@
 import * as lancedb from '@lancedb/lancedb';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 import md5 from 'md5';
 import { Embedder } from './embedder.js';
 
-const DB_PATH = '.gemini-obsidian-lancedb';
+const DB_PATH = path.join(os.homedir(), '.gemini-obsidian-lancedb');
 
 interface NoteChunk {
   id: string;

@@ -24397,7 +24397,7 @@ var StdioServerTransport = class {
 // src/index.ts
 var fs2 = __toESM(require("fs/promises"));
 var path3 = __toESM(require("path"));
-var os = __toESM(require("os"));
+var os2 = __toESM(require("os"));
 
 // node_modules/@isaacs/balanced-match/dist/esm/index.js
 var balanced = (a, b, str2) => {
@@ -31059,6 +31059,7 @@ var import_gray_matter2 = __toESM(require_gray_matter());
 var lancedb = __toESM(require("@lancedb/lancedb"));
 var fs = __toESM(require("fs/promises"));
 var path2 = __toESM(require("path"));
+var os = __toESM(require("os"));
 var import_gray_matter = __toESM(require_gray_matter());
 var import_md5 = __toESM(require_md5());
 
@@ -31092,7 +31093,7 @@ var Embedder = class _Embedder {
 };
 
 // src/rag/store.ts
-var DB_PATH = ".gemini-obsidian-lancedb";
+var DB_PATH = path2.join(os.homedir(), ".gemini-obsidian-lancedb");
 var VaultIndexer = class {
   db = null;
   table = null;
@@ -31189,7 +31190,7 @@ Content: ${text}`;
 // src/index.ts
 var VAULT_PATH = process.env.OBSIDIAN_VAULT_PATH || null;
 var indexer = new VaultIndexer();
-var CONFIG_PATH = path3.join(os.homedir(), ".gemini-obsidian.config.json");
+var CONFIG_PATH = path3.join(os2.homedir(), ".gemini-obsidian.config.json");
 async function saveConfig(vaultPath) {
   try {
     await fs2.writeFile(CONFIG_PATH, JSON.stringify({ vault_path: vaultPath }), "utf-8");
