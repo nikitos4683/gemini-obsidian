@@ -136,7 +136,13 @@ function getVaultPath(providedPath?: string): string {
             result = matches.join('\n');
         } else if (toolName === 'obsidian_rag_index') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const res = await indexer.indexVault(vp);
+            const fp = parsedArgs.file_path ? String(parsedArgs.file_path) : null;
+            let res;
+            if (fp) {
+                res = await indexer.indexFile(vp, fp);
+            } else {
+                res = await indexer.indexVault(vp);
+            }
             result = JSON.stringify(res);
         } else if (toolName === 'obsidian_rag_query') {
             const query = String(parsedArgs.query);
@@ -338,11 +344,12 @@ function getVaultPath(providedPath?: string): string {
         },
         {
           name: 'obsidian_rag_index',
-          description: 'Index the vault for semantic search (RAG).',
+          description: 'Index the vault for semantic search (RAG). If file_path is provided, only that file is re-indexed.',
           inputSchema: {
             type: 'object',
             properties: {
               vault_path: { type: 'string', description: 'Optional vault path override' },
+              file_path: { type: 'string', description: 'Relative path to a specific note to re-index' },
             },
           },
         },
@@ -497,7 +504,13 @@ function getVaultPath(providedPath?: string): string {
       }
       if (name === 'obsidian_rag_index') {
           const vp = getVaultPath(args?.vault_path as string);
-          const result = await indexer.indexVault(vp);
+          const fp = args?.file_path ? String(args.file_path) : null;
+          let result;
+          if (fp) {
+              result = await indexer.indexFile(vp, fp);
+          } else {
+              result = await indexer.indexVault(vp);
+          }
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       }
       if (name === 'obsidian_rag_query') {

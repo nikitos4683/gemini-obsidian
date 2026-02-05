@@ -59956,6 +59956,50 @@ var VaultIndexer = class {
     }
     return this.table;
   }
+  async indexFile(vaultPath, relativePath) {
+    const embedder = Embedder.getInstance();
+    const filePath = path4.join(vaultPath, relativePath);
+    try {
+      const content = await fs3.readFile(filePath, "utf-8");
+      const { data, content: body } = (0, import_gray_matter.default)(content);
+      const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+      const chunks = [];
+      for (let i2 = 0; i2 < paragraphs.length; i2++) {
+        const text = paragraphs[i2].trim();
+        if (text.length < 20) continue;
+        const context = `File: ${relativePath}
+Content: ${text}`;
+        try {
+          const vector = await embedder.embed(context);
+          chunks.push({
+            id: (0, import_md5.default)(`${relativePath}-${i2}`),
+            path: relativePath,
+            text,
+            vector
+          });
+        } catch (err) {
+          console.error(`Failed to embed chunk in ${relativePath}:`, err);
+        }
+      }
+      if (chunks.length > 0) {
+        const db = await this.getDb();
+        const tableNames = await db.tableNames();
+        if (!tableNames.includes("notes")) {
+          this.table = await db.createTable("notes", chunks);
+        } else {
+          this.table = await db.openTable("notes");
+          await this.table.delete(`path = '${relativePath.replace(/'/g, "''")}'`);
+          await this.table.add(chunks);
+        }
+        console.error(`Indexed ${chunks.length} chunks for ${relativePath}.`);
+        return { success: true, chunks: chunks.length };
+      }
+      return { success: false, message: "No content to index or table not available." };
+    } catch (err) {
+      console.error(`Failed to index file ${filePath}:`, err);
+      return { success: false, message: String(err) };
+    }
+  }
   async indexVault(vaultPath) {
     const embedder = Embedder.getInstance();
     const files = await glob("**/*.md", { cwd: vaultPath, absolute: true });
@@ -60129,7 +60173,13 @@ function getVaultPath(providedPath) {
         result = matches.join("\n");
       } else if (toolName === "obsidian_rag_index") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const res = await indexer.indexVault(vp);
+        const fp = parsedArgs.file_path ? String(parsedArgs.file_path) : null;
+        let res;
+        if (fp) {
+          res = await indexer.indexFile(vp, fp);
+        } else {
+          res = await indexer.indexVault(vp);
+        }
         result = JSON.stringify(res);
       } else if (toolName === "obsidian_rag_query") {
         const query = String(parsedArgs.query);
@@ -60338,11 +60388,12 @@ Content: ${r.text}`).join("\n---\n");
         },
         {
           name: "obsidian_rag_index",
-          description: "Index the vault for semantic search (RAG).",
+          description: "Index the vault for semantic search (RAG). If file_path is provided, only that file is re-indexed.",
           inputSchema: {
             type: "object",
             properties: {
-              vault_path: { type: "string", description: "Optional vault path override" }
+              vault_path: { type: "string", description: "Optional vault path override" },
+              file_path: { type: "string", description: "Relative path to a specific note to re-index" }
             }
           }
         },
@@ -60501,7 +60552,13 @@ Content: ${r.text}`).join("\n---\n");
       }
       if (name2 === "obsidian_rag_index") {
         const vp = getVaultPath(args2?.vault_path);
-        const result = await indexer.indexVault(vp);
+        const fp = args2?.file_path ? String(args2.file_path) : null;
+        let result;
+        if (fp) {
+          result = await indexer.indexFile(vp, fp);
+        } else {
+          result = await indexer.indexVault(vp);
+        }
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
       if (name2 === "obsidian_rag_query") {
