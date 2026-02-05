@@ -2,13 +2,13 @@
   "hooks": {
     "AfterTool": [
       {
-        "matcher": "obsidian_(create|append)_note",
+        "matcher": "obsidian_(create|append)_note|obsidian_update_frontmatter",
         "hooks": [
           {
             "name": "obsidian-reindex",
             "type": "command",
-            "command": "node ${extensionPath}/dist/index.js obsidian_rag_index",
-            "description": "Re-indexes the vault after a note is created or modified."
+            "command": "node ${extensionPath}/dist/index.js obsidian_rag_index --file_path \"${toolInput.file_path}\"",
+            "description": "Re-indexes only the changed note after it is created or modified."
           }
         ]
       }

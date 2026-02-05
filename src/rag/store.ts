@@ -41,7 +41,7 @@ export class VaultIndexer {
   private async createOrGetTable(data?: any[]) {
     const db = await this.getDb();
     const tableNames = await db.tableNames();
-    
+
     if (tableNames.includes('notes')) {
         this.table = await db.openTable('notes');
         if (data && data.length > 0) {
@@ -49,7 +49,7 @@ export class VaultIndexer {
         }
     } else {
         if (!data || data.length === 0) {
-            // Cannot create empty table easily without schema in some versions, 
+            // Cannot create empty table easily without schema in some versions,
             // but let's wait until we have data.
             return null;
         }
@@ -58,12 +58,63 @@ export class VaultIndexer {
     return this.table;
   }
 
+  public async indexFile(vaultPath: string, relativePath: string) {
+    const embedder = Embedder.getInstance();
+    const filePath = path.join(vaultPath, relativePath);
+
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const { data, content: body } = matter(content);
+
+      const paragraphs = body.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      const chunks: NoteChunk[] = [];
+
+      for (let i = 0; i < paragraphs.length; i++) {
+        const text = paragraphs[i].trim();
+        if (text.length < 20) continue;
+
+        const context = `File: ${relativePath}\nContent: ${text}`;
+
+        try {
+            const vector = await embedder.embed(context);
+            chunks.push({
+                id: md5(`${relativePath}-${i}`),
+                path: relativePath,
+                text: text,
+                vector: vector
+            });
+        } catch (err) {
+            console.error(`Failed to embed chunk in ${relativePath}:`, err);
+        }
+      }
+
+      if (chunks.length > 0) {
+          const db = await this.getDb();
+          const tableNames = await db.tableNames();
+          if (!tableNames.includes('notes')) {
+              this.table = await db.createTable('notes', chunks);
+          } else {
+              this.table = await db.openTable('notes');
+              // Delete old chunks for this file
+              await this.table.delete(`path = '${relativePath.replace(/'/g, "''")}'`);
+              await this.table.add(chunks);
+          }
+          console.error(`Indexed ${chunks.length} chunks for ${relativePath}.`);
+          return { success: true, chunks: chunks.length };
+      }
+      return { success: false, message: "No content to index or table not available." };
+    } catch (err) {
+      console.error(`Failed to index file ${filePath}:`, err);
+      return { success: false, message: String(err) };
+    }
+  }
+
   public async indexVault(vaultPath: string) {
     const embedder = Embedder.getInstance();
-    
+
     // 1. Find all markdown files
     const files = await glob('**/*.md', { cwd: vaultPath, absolute: true });
-    
+
     console.error(`Found ${files.length} notes in ${vaultPath}`);
 
     const chunks: NoteChunk[] = [];
@@ -72,7 +123,7 @@ export class VaultIndexer {
       try {
         const content = await fs.readFile(filePath, 'utf-8');
         const { data, content: body } = matter(content);
-        
+
         // Simple chunking by paragraphs for now
         // A better approach would be recursive character text splitter or header-based
         const relativePath = path.relative(vaultPath, filePath);
@@ -85,7 +136,7 @@ export class VaultIndexer {
           // Include metadata in embedding context if useful, but here we just embed text
           // We prepend title/path to context for better retrieval
           const context = `File: ${relativePath}\nContent: ${text}`;
-          
+
           try {
               const vector = await embedder.embed(context);
               chunks.push({
@@ -110,7 +161,7 @@ export class VaultIndexer {
         try {
             await db.dropTable('notes');
         } catch (e) { /* ignore if not exists */ }
-        
+
         await this.createOrGetTable(chunks);
         console.error(`Indexed ${chunks.length} chunks.`);
         return { success: true, chunks: chunks.length };
@@ -124,14 +175,14 @@ export class VaultIndexer {
     if (!table) {
         return [];
     }
-    
+
     const embedder = Embedder.getInstance();
     const vector = await embedder.embed(query);
 
     const results = await table.vectorSearch(vector)
         .limit(limit)
         .toArray();
-    
+
     return results;
   }
 }
