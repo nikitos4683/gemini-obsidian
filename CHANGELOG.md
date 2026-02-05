@@ -2,23 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.6] - 2026-02-05
-
-### Fixed
-- Move native dependency check to the absolute top of the bundle to prevent early crashes.
-- Improve error messages when dependencies are missing.
-
-## [1.0.5] - 2026-02-05
-
-### Fixed
-- Bundle `@xenova/transformers` by shimming `import.meta.url` to fix "Connection closed" errors.
-- Add defensive startup check for missing native dependencies (`@lancedb/lancedb`) with clear instructions.
-- Ensure storage path is absolute (~/.gemini-obsidian-lancedb) for consistency.
-
 ## [1.0.4] - 2026-02-05
 
 ### Fixed
-- Use absolute path for LanceDB storage in the home directory to avoid issues with stale working directories.
+- **Bundling**: Correctly bundle `@xenova/transformers` by shimming `import.meta.url` to fix "Connection closed" errors.
+- **Robustness**: Move native dependency checks (`@lancedb/lancedb`, `onnxruntime-node`) to the very top of the extension to prevent early crashes and provide clear error messages.
+- **Storage**: Use absolute paths (`~/.gemini-obsidian-lancedb`) for the vector database to prevent `ENOENT` errors when working directories change.
+- **Dependencies**: Clean up `dependencies` vs `devDependencies` to ensure correct runtime installation.
 
 ## [1.0.3] - 2026-02-05
 
