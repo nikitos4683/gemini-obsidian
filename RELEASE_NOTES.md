@@ -1,10 +1,15 @@
-# Release 1.0.6
+# Release 1.0.4
 
 ## Summary
-Fixed a critical bug where the extension would crash before it could report missing dependencies.
+This release significantly improves the stability and ease of use for the extension. It addresses critical issues with bundling, dependency management, and storage paths.
 
 ## Bug Fixes
-- **Startup:** Moved the dependency check to the very top of the bundle. This ensures that if `@lancedb/lancedb` or `onnxruntime-node` are missing, the extension prints a clear error message instead of a stack trace.
+- **Robust Installation**: The extension now defensively checks for missing native dependencies at startup and provides clear instructions if `npm install` is needed.
+- **Connection Stability**: Fixed "Connection closed" errors by properly bundling `@xenova/transformers` with a compatibility shim.
+- **Consistent Storage**: The vector database is now stored at `~/.gemini-obsidian-lancedb`, preventing errors when running the extension from different directories.
 
-# Release 1.0.5
+## Operations
+- If you see an error about missing dependencies (`@lancedb/lancedb`), please run `npm install` inside the extension directory.
+
+# Release 1.0.3
 ...
