@@ -67,28 +67,30 @@ export class VaultIndexer {
       const { data, content: body } = matter(content);
 
       const paragraphs = body.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-      const chunks: NoteChunk[] = [];
+      
+      const textsToEmbed: string[] = [];
+      const chunkMetadata: {id: string, text: string, path: string}[] = [];
 
       for (let i = 0; i < paragraphs.length; i++) {
         const text = paragraphs[i].trim();
         if (text.length < 20) continue;
 
         const context = `File: ${relativePath}\nContent: ${text}`;
-
-        try {
-            const vector = await embedder.embed(context);
-            chunks.push({
-                id: md5(`${relativePath}-${i}`),
-                path: relativePath,
-                text: text,
-                vector: vector
-            });
-        } catch (err) {
-            console.error(`Failed to embed chunk in ${relativePath}:`, err);
-        }
+        textsToEmbed.push(context);
+        chunkMetadata.push({
+            id: md5(`${relativePath}-${i}`),
+            path: relativePath,
+            text: text
+        });
       }
 
-      if (chunks.length > 0) {
+      if (textsToEmbed.length > 0) {
+          const vectors = await embedder.embedBatch(textsToEmbed);
+          const chunks: NoteChunk[] = chunkMetadata.map((meta, idx) => ({
+              ...meta,
+              vector: vectors[idx]
+          }));
+
           const db = await this.getDb();
           const tableNames = await db.tableNames();
           if (!tableNames.includes('notes')) {
@@ -114,57 +116,72 @@ export class VaultIndexer {
 
     // 1. Find all markdown files
     const files = await glob('**/*.md', { cwd: vaultPath, absolute: true });
-
     console.error(`Found ${files.length} notes in ${vaultPath}`);
 
-    const chunks: NoteChunk[] = [];
+    const allChunks: NoteChunk[] = [];
+    const batchSize = 32; // Batch size for embedding model
+    let currentBatchTexts: string[] = [];
+    let currentBatchMeta: {id: string, text: string, path: string}[] = [];
+
+    // Helper to flush current batch
+    const flushBatch = async () => {
+        if (currentBatchTexts.length === 0) return;
+        try {
+            const vectors = await embedder.embedBatch(currentBatchTexts);
+            for (let i = 0; i < vectors.length; i++) {
+                allChunks.push({
+                    ...currentBatchMeta[i],
+                    vector: vectors[i]
+                });
+            }
+        } catch (e) {
+            console.error("Failed to embed batch:", e);
+        }
+        currentBatchTexts = [];
+        currentBatchMeta = [];
+    };
 
     for (const filePath of files) {
       try {
         const content = await fs.readFile(filePath, 'utf-8');
         const { data, content: body } = matter(content);
-
-        // Simple chunking by paragraphs for now
-        // A better approach would be recursive character text splitter or header-based
         const relativePath = path.relative(vaultPath, filePath);
         const paragraphs = body.split(/\n\s*\n/).filter(p => p.trim().length > 0);
 
         for (let i = 0; i < paragraphs.length; i++) {
           const text = paragraphs[i].trim();
-          if (text.length < 20) continue; // Skip very short chunks
+          if (text.length < 20) continue; 
 
-          // Include metadata in embedding context if useful, but here we just embed text
-          // We prepend title/path to context for better retrieval
           const context = `File: ${relativePath}\nContent: ${text}`;
+          currentBatchTexts.push(context);
+          currentBatchMeta.push({
+              id: md5(`${relativePath}-${i}`),
+              path: relativePath,
+              text: text
+          });
 
-          try {
-              const vector = await embedder.embed(context);
-              chunks.push({
-                  id: md5(`${relativePath}-${i}`),
-                  path: relativePath,
-                  text: text,
-                  vector: vector
-              });
-          } catch (err) {
-              console.error(`Failed to embed chunk in ${relativePath}:`, err);
+          if (currentBatchTexts.length >= batchSize) {
+              await flushBatch();
           }
         }
       } catch (err) {
         console.error(`Failed to process file ${filePath}:`, err);
-        continue;
       }
     }
 
-    if (chunks.length > 0) {
+    // Flush remaining
+    await flushBatch();
+
+    if (allChunks.length > 0) {
         // Drop existing table to full re-index (simplest for now)
         const db = await this.getDb();
         try {
             await db.dropTable('notes');
         } catch (e) { /* ignore if not exists */ }
 
-        await this.createOrGetTable(chunks);
-        console.error(`Indexed ${chunks.length} chunks.`);
-        return { success: true, chunks: chunks.length };
+        await this.createOrGetTable(allChunks);
+        console.error(`Indexed ${allChunks.length} chunks.`);
+        return { success: true, chunks: allChunks.length };
     } else {
         return { success: false, message: "No content found to index." };
     }
