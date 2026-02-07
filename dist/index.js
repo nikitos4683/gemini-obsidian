@@ -59966,41 +59966,136 @@ var VaultIndexer = class {
     }
     return this.table;
   }
+  async embedWithFallback(embedder, texts, meta3) {
+    if (texts.length === 0) return [];
+    try {
+      const vectors = await embedder.embedBatch(texts);
+      return meta3.slice(0, vectors.length).map((item, idx) => ({
+        ...item,
+        vector: vectors[idx]
+      }));
+    } catch (batchErr) {
+      console.error(`Failed to embed batch of ${texts.length} chunks; retrying one-by-one:`, batchErr);
+    }
+    const recovered = [];
+    for (let i2 = 0; i2 < texts.length; i2++) {
+      try {
+        const vector = await embedder.embed(texts[i2]);
+        recovered.push({
+          ...meta3[i2],
+          vector
+        });
+      } catch (singleErr) {
+        console.error(`Failed to embed chunk ${meta3[i2]?.id ?? i2}:`, singleErr);
+      }
+    }
+    return recovered;
+  }
+  splitTextForEmbedding(text, maxChars = 1800) {
+    const normalized = text.trim().replace(/\s+/g, " ");
+    if (normalized.length <= maxChars) return [normalized];
+    const segments = [];
+    const sentenceParts = normalized.split(/(?<=[.!?])\s+/);
+    let current = "";
+    for (const part of sentenceParts) {
+      if (part.length > maxChars) {
+        if (current.length > 0) {
+          segments.push(current);
+          current = "";
+        }
+        for (let i2 = 0; i2 < part.length; i2 += maxChars) {
+          segments.push(part.slice(i2, i2 + maxChars));
+        }
+        continue;
+      }
+      const candidate = current.length > 0 ? `${current} ${part}` : part;
+      if (candidate.length <= maxChars) {
+        current = candidate;
+      } else {
+        if (current.length > 0) segments.push(current);
+        current = part;
+      }
+    }
+    if (current.length > 0) segments.push(current);
+    return segments;
+  }
+  mergeSegmentsForEmbedding(segments, targetChars) {
+    if (segments.length === 0) return [];
+    const merged = [];
+    let current = "";
+    for (const segment of segments) {
+      if (segment.length >= targetChars) {
+        if (current.length > 0) {
+          merged.push(current);
+          current = "";
+        }
+        merged.push(segment);
+        continue;
+      }
+      const candidate = current.length > 0 ? `${current}
+
+${segment}` : segment;
+      if (candidate.length <= targetChars) {
+        current = candidate;
+      } else {
+        if (current.length > 0) merged.push(current);
+        current = segment;
+      }
+    }
+    if (current.length > 0) merged.push(current);
+    return merged;
+  }
+  buildEmbeddingInputs(relativePath, body) {
+    const minChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MIN_CHUNK_CHARS ?? "40");
+    const minChunkChars = Number.isFinite(minChunkCharsRaw) && minChunkCharsRaw > 0 ? Math.floor(minChunkCharsRaw) : 40;
+    const maxChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MAX_CHUNK_CHARS ?? "1800");
+    const maxChunkChars = Number.isFinite(maxChunkCharsRaw) && maxChunkCharsRaw > 0 ? Math.floor(maxChunkCharsRaw) : 1800;
+    const targetChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_TARGET_CHUNK_CHARS ?? "700");
+    const targetChunkChars = Number.isFinite(targetChunkCharsRaw) && targetChunkCharsRaw > minChunkChars ? Math.floor(targetChunkCharsRaw) : 700;
+    const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+    const rawSegments = [];
+    const chunkMetadata = [];
+    for (let i2 = 0; i2 < paragraphs.length; i2++) {
+      const paragraph = paragraphs[i2].trim();
+      if (paragraph.length < minChunkChars) continue;
+      const segments = this.splitTextForEmbedding(paragraph, maxChunkChars);
+      for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+        const segment = segments[segmentIndex];
+        if (segment.length < minChunkChars) continue;
+        rawSegments.push(segment);
+      }
+    }
+    const textsToEmbed = this.mergeSegmentsForEmbedding(rawSegments, targetChunkChars);
+    for (let chunkIndex = 0; chunkIndex < textsToEmbed.length; chunkIndex++) {
+      chunkMetadata.push({
+        id: (0, import_md5.default)(`${relativePath}-${chunkIndex}`),
+        path: relativePath,
+        text: textsToEmbed[chunkIndex]
+      });
+    }
+    return { textsToEmbed, chunkMetadata };
+  }
   async indexFile(vaultPath, relativePath) {
     const embedder = Embedder.getInstance();
     const filePath = path4.join(vaultPath, relativePath);
     try {
       const content = await fs3.readFile(filePath, "utf-8");
       const { data, content: body } = (0, import_gray_matter.default)(content);
-      const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
-      const textsToEmbed = [];
-      const chunkMetadata = [];
-      for (let i2 = 0; i2 < paragraphs.length; i2++) {
-        const text = paragraphs[i2].trim();
-        if (text.length < 20) continue;
-        const context = `File: ${relativePath}
-Content: ${text}`;
-        textsToEmbed.push(context);
-        chunkMetadata.push({
-          id: (0, import_md5.default)(`${relativePath}-${i2}`),
-          path: relativePath,
-          text
-        });
-      }
+      const { textsToEmbed, chunkMetadata } = this.buildEmbeddingInputs(relativePath, body);
       if (textsToEmbed.length > 0) {
-        const vectors = await embedder.embedBatch(textsToEmbed);
-        const chunks = chunkMetadata.map((meta3, idx) => ({
-          ...meta3,
-          vector: vectors[idx]
-        }));
+        const chunks = await this.embedWithFallback(embedder, textsToEmbed, chunkMetadata);
+        if (chunks.length === 0) {
+          return { success: false, message: `Failed to embed content for ${relativePath}.` };
+        }
+        const chunkRows = chunks;
         const db = await this.getDb();
         const tableNames = await db.tableNames();
         if (!tableNames.includes("notes")) {
-          this.table = await db.createTable("notes", chunks);
+          this.table = await db.createTable("notes", chunkRows);
         } else {
           this.table = await db.openTable("notes");
           await this.table.delete(`path = '${relativePath.replace(/'/g, "''")}'`);
-          await this.table.add(chunks);
+          await this.table.add(chunkRows);
         }
         console.error(`Indexed ${chunks.length} chunks for ${relativePath}.`);
         return { success: true, chunks: chunks.length };
@@ -60013,25 +60108,59 @@ Content: ${text}`;
   }
   async indexVault(vaultPath) {
     const embedder = Embedder.getInstance();
+    const db = await this.getDb();
     const files = await glob("**/*.md", { cwd: vaultPath, absolute: true });
     console.error(`Found ${files.length} notes in ${vaultPath}`);
-    const allChunks = [];
-    const batchSize = 32;
+    const batchSizeRaw = Number(process.env.GEMINI_OBSIDIAN_EMBED_BATCH_SIZE ?? "48");
+    const batchSize = Number.isFinite(batchSizeRaw) && batchSizeRaw > 0 ? Math.min(Math.floor(batchSizeRaw), 256) : 48;
     let currentBatchTexts = [];
     let currentBatchMeta = [];
+    let indexedChunks = 0;
+    let tableInitialized = false;
+    let filesProcessed = 0;
+    const progressInterval = 100;
+    const useProgressBar = process.stderr.isTTY === true;
+    const renderProgress = (forceLog = false) => {
+      if (files.length === 0) return;
+      if (useProgressBar) {
+        const percent = Math.min(100, Math.floor(filesProcessed / files.length * 100));
+        const width = 30;
+        const filled = Math.round(percent / 100 * width);
+        const bar = `${"=".repeat(filled)}${"-".repeat(width - filled)}`;
+        process.stderr.write(
+          `\rIndexing [${bar}] ${percent}% (${filesProcessed}/${files.length}) ${indexedChunks} chunks`
+        );
+        if (filesProcessed === files.length) {
+          process.stderr.write("\n");
+        }
+        return;
+      }
+      if (forceLog || filesProcessed % progressInterval === 0 || filesProcessed === files.length) {
+        console.error(`Indexing progress: ${filesProcessed}/${files.length} files, ${indexedChunks} chunks embedded`);
+      }
+    };
+    const persistChunks = async (chunks) => {
+      if (chunks.length === 0) return;
+      const chunkRows = chunks;
+      if (!tableInitialized) {
+        try {
+          await db.dropTable("notes");
+        } catch (e) {
+        }
+        this.table = await db.createTable("notes", chunkRows);
+        tableInitialized = true;
+      } else {
+        if (!this.table) {
+          this.table = await db.openTable("notes");
+        }
+        await this.table.add(chunkRows);
+      }
+      indexedChunks += chunks.length;
+    };
     const flushBatch = async () => {
       if (currentBatchTexts.length === 0) return;
-      try {
-        const vectors = await embedder.embedBatch(currentBatchTexts);
-        for (let i2 = 0; i2 < vectors.length; i2++) {
-          allChunks.push({
-            ...currentBatchMeta[i2],
-            vector: vectors[i2]
-          });
-        }
-      } catch (e) {
-        console.error("Failed to embed batch:", e);
-      }
+      const embeddedChunks = await this.embedWithFallback(embedder, currentBatchTexts, currentBatchMeta);
+      await persistChunks(embeddedChunks);
       currentBatchTexts = [];
       currentBatchMeta = [];
     };
@@ -60040,36 +60169,26 @@ Content: ${text}`;
         const content = await fs3.readFile(filePath, "utf-8");
         const { data, content: body } = (0, import_gray_matter.default)(content);
         const relativePath = path4.relative(vaultPath, filePath);
-        const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
-        for (let i2 = 0; i2 < paragraphs.length; i2++) {
-          const text = paragraphs[i2].trim();
-          if (text.length < 20) continue;
-          const context = `File: ${relativePath}
-Content: ${text}`;
-          currentBatchTexts.push(context);
-          currentBatchMeta.push({
-            id: (0, import_md5.default)(`${relativePath}-${i2}`),
-            path: relativePath,
-            text
-          });
+        const { textsToEmbed, chunkMetadata } = this.buildEmbeddingInputs(relativePath, body);
+        for (let i2 = 0; i2 < textsToEmbed.length; i2++) {
+          currentBatchTexts.push(textsToEmbed[i2]);
+          currentBatchMeta.push(chunkMetadata[i2]);
           if (currentBatchTexts.length >= batchSize) {
             await flushBatch();
           }
         }
       } catch (err) {
         console.error(`Failed to process file ${filePath}:`, err);
+      } finally {
+        filesProcessed++;
+        renderProgress();
       }
     }
     await flushBatch();
-    if (allChunks.length > 0) {
-      const db = await this.getDb();
-      try {
-        await db.dropTable("notes");
-      } catch (e) {
-      }
-      await this.createOrGetTable(allChunks);
-      console.error(`Indexed ${allChunks.length} chunks.`);
-      return { success: true, chunks: allChunks.length };
+    renderProgress(true);
+    if (indexedChunks > 0) {
+      console.error(`Indexed ${indexedChunks} chunks.`);
+      return { success: true, chunks: indexedChunks };
     } else {
       return { success: false, message: "No content found to index." };
     }
