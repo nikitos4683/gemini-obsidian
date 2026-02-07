@@ -60095,6 +60095,26 @@ function getVaultPath(providedPath) {
   }
   return p;
 }
+async function readStdin() {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    process.stdin.setEncoding("utf-8");
+    process.stdin.on("data", (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on("end", () => {
+      resolve(data);
+    });
+    process.stdin.on("error", (err) => {
+      reject(err);
+    });
+    setTimeout(() => {
+      if (data === "") {
+        resolve("");
+      }
+    }, 1e3);
+  });
+}
 (async () => {
   if (!VAULT_PATH) {
     VAULT_PATH = await loadConfig2();
@@ -60105,10 +60125,15 @@ function getVaultPath(providedPath) {
     const toolName = args[0];
     const toolArgs = args.slice(1);
     const parsedArgs = {};
-    for (let i2 = 0; i2 < toolArgs.length; i2 += 2) {
-      if (toolArgs[i2].startsWith("--")) {
+    for (let i2 = 0; i2 < toolArgs.length; i2++) {
+      if (toolArgs[i2] && toolArgs[i2].startsWith("--")) {
         const key = toolArgs[i2].substring(2);
-        parsedArgs[key] = toolArgs[i2 + 1];
+        if (i2 + 1 < toolArgs.length && !toolArgs[i2 + 1].startsWith("--")) {
+          parsedArgs[key] = toolArgs[i2 + 1];
+          i2++;
+        } else {
+          parsedArgs[key] = true;
+        }
       }
     }
     try {
@@ -60174,8 +60199,12 @@ function getVaultPath(providedPath) {
       } else if (toolName === "obsidian_rag_index") {
         let vp, fp;
         if (parsedArgs.hook) {
-          const input = JSON.parse(await fs4.readFile(0, "utf-8"));
-          vp = getVaultPath(input.tool_input?.vault_path);
+          const inputStr = await readStdin();
+          if (!inputStr) {
+            process.exit(1);
+          }
+          const input = JSON.parse(inputStr);
+          vp = getVaultPath(input.tool_input?.vault_path || VAULT_PATH);
           fp = input.tool_input?.file_path;
         } else {
           vp = getVaultPath(parsedArgs.vault_path);
