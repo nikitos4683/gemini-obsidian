@@ -59917,6 +59917,16 @@ var Embedder = class _Embedder {
     const output = await pipe2(text, { pooling: "mean", normalize: true });
     return Array.from(output.data);
   }
+  async embedBatch(texts) {
+    const pipe2 = await this.getPipeline();
+    const output = await pipe2(texts, { pooling: "mean", normalize: true });
+    const embeddingDim = output.dims[1];
+    const embeddings = [];
+    for (let i2 = 0; i2 < output.dims[0]; i2++) {
+      embeddings.push(Array.from(output.data.slice(i2 * embeddingDim, (i2 + 1) * embeddingDim)));
+    }
+    return embeddings;
+  }
 };
 
 // src/rag/store.ts
@@ -59963,25 +59973,26 @@ var VaultIndexer = class {
       const content = await fs3.readFile(filePath, "utf-8");
       const { data, content: body } = (0, import_gray_matter.default)(content);
       const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
-      const chunks = [];
+      const textsToEmbed = [];
+      const chunkMetadata = [];
       for (let i2 = 0; i2 < paragraphs.length; i2++) {
         const text = paragraphs[i2].trim();
         if (text.length < 20) continue;
         const context = `File: ${relativePath}
 Content: ${text}`;
-        try {
-          const vector = await embedder.embed(context);
-          chunks.push({
-            id: (0, import_md5.default)(`${relativePath}-${i2}`),
-            path: relativePath,
-            text,
-            vector
-          });
-        } catch (err) {
-          console.error(`Failed to embed chunk in ${relativePath}:`, err);
-        }
+        textsToEmbed.push(context);
+        chunkMetadata.push({
+          id: (0, import_md5.default)(`${relativePath}-${i2}`),
+          path: relativePath,
+          text
+        });
       }
-      if (chunks.length > 0) {
+      if (textsToEmbed.length > 0) {
+        const vectors = await embedder.embedBatch(textsToEmbed);
+        const chunks = chunkMetadata.map((meta3, idx) => ({
+          ...meta3,
+          vector: vectors[idx]
+        }));
         const db = await this.getDb();
         const tableNames = await db.tableNames();
         if (!tableNames.includes("notes")) {
@@ -60004,7 +60015,26 @@ Content: ${text}`;
     const embedder = Embedder.getInstance();
     const files = await glob("**/*.md", { cwd: vaultPath, absolute: true });
     console.error(`Found ${files.length} notes in ${vaultPath}`);
-    const chunks = [];
+    const allChunks = [];
+    const batchSize = 32;
+    let currentBatchTexts = [];
+    let currentBatchMeta = [];
+    const flushBatch = async () => {
+      if (currentBatchTexts.length === 0) return;
+      try {
+        const vectors = await embedder.embedBatch(currentBatchTexts);
+        for (let i2 = 0; i2 < vectors.length; i2++) {
+          allChunks.push({
+            ...currentBatchMeta[i2],
+            vector: vectors[i2]
+          });
+        }
+      } catch (e) {
+        console.error("Failed to embed batch:", e);
+      }
+      currentBatchTexts = [];
+      currentBatchMeta = [];
+    };
     for (const filePath of files) {
       try {
         const content = await fs3.readFile(filePath, "utf-8");
@@ -60016,32 +60046,30 @@ Content: ${text}`;
           if (text.length < 20) continue;
           const context = `File: ${relativePath}
 Content: ${text}`;
-          try {
-            const vector = await embedder.embed(context);
-            chunks.push({
-              id: (0, import_md5.default)(`${relativePath}-${i2}`),
-              path: relativePath,
-              text,
-              vector
-            });
-          } catch (err) {
-            console.error(`Failed to embed chunk in ${relativePath}:`, err);
+          currentBatchTexts.push(context);
+          currentBatchMeta.push({
+            id: (0, import_md5.default)(`${relativePath}-${i2}`),
+            path: relativePath,
+            text
+          });
+          if (currentBatchTexts.length >= batchSize) {
+            await flushBatch();
           }
         }
       } catch (err) {
         console.error(`Failed to process file ${filePath}:`, err);
-        continue;
       }
     }
-    if (chunks.length > 0) {
+    await flushBatch();
+    if (allChunks.length > 0) {
       const db = await this.getDb();
       try {
         await db.dropTable("notes");
       } catch (e) {
       }
-      await this.createOrGetTable(chunks);
-      console.error(`Indexed ${chunks.length} chunks.`);
-      return { success: true, chunks: chunks.length };
+      await this.createOrGetTable(allChunks);
+      console.error(`Indexed ${allChunks.length} chunks.`);
+      return { success: true, chunks: allChunks.length };
     } else {
       return { success: false, message: "No content found to index." };
     }
