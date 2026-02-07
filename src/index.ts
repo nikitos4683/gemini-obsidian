@@ -55,6 +55,29 @@ function getVaultPath(providedPath?: string): string {
   return p;
 }
 
+async function readStdin(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        let data = '';
+        process.stdin.setEncoding('utf-8');
+        process.stdin.on('data', (chunk) => {
+            data += chunk;
+        });
+        process.stdin.on('end', () => {
+            resolve(data);
+        });
+        process.stdin.on('error', (err) => {
+            reject(err);
+        });
+        // Handle cases where stdin might be empty or already closed
+        setTimeout(() => {
+            if (data === '') {
+                // If no data after 1s, resolve with empty to avoid hang
+                resolve('');
+            }
+        }, 1000);
+    });
+}
+
 (async () => {
   // Load config if environment variable is not set
   if (!VAULT_PATH) {
@@ -72,10 +95,15 @@ function getVaultPath(providedPath?: string): string {
     const toolArgs = args.slice(1);
     
     const parsedArgs: any = {};
-    for (let i = 0; i < toolArgs.length; i+=2) {
-        if (toolArgs[i].startsWith('--')) {
+    for (let i = 0; i < toolArgs.length; i++) {
+        if (toolArgs[i] && toolArgs[i].startsWith('--')) {
             const key = toolArgs[i].substring(2);
-            parsedArgs[key] = toolArgs[i+1];
+            if (i + 1 < toolArgs.length && !toolArgs[i+1].startsWith('--')) {
+                parsedArgs[key] = toolArgs[i+1];
+                i++;
+            } else {
+                parsedArgs[key] = true;
+            }
         }
     }
 
@@ -137,8 +165,12 @@ function getVaultPath(providedPath?: string): string {
         } else if (toolName === 'obsidian_rag_index') {
             let vp, fp;
             if (parsedArgs.hook) {
-                const input = JSON.parse(await fs.readFile(0, 'utf-8'));
-                vp = getVaultPath(input.tool_input?.vault_path);
+                const inputStr = await readStdin();
+                if (!inputStr) {
+                    process.exit(1);
+                }
+                const input = JSON.parse(inputStr);
+                vp = getVaultPath(input.tool_input?.vault_path || VAULT_PATH);
                 fp = input.tool_input?.file_path;
             } else {
                 vp = getVaultPath(parsedArgs.vault_path);
