@@ -1,3 +1,22 @@
+# Release v1.3.0
+
+## Summary
+This release focuses on improving the robustness and efficiency of the RAG (Retrieval-Augmented Generation) system. It introduces a significant overhaul to the vault processing engine, enabling true incremental indexing. This means only modified files are processed, drastically reducing the time and resources needed to keep your vault index up to date. Additionally, strict runtime checks and dependency pinning have been added to ensure stability across different environments.
+
+## New Features
+- **Incremental Indexing & Vault Overhaul**:
+  - The indexing engine now tracks file hashes to identify changed content.
+  - Only modified or new files are re-embedded and updated in the vector database.
+  - This overhaul improves performance for large vaults and reduces API usage for embedding models.
+
+## Bug Fixes
+- **Runtime Compatibility**:
+  - Pinned `onnxruntime-node` to version `1.14.0` to ensure compatibility with `@xenova/transformers`.
+  - Added a startup check that verifies the installed `onnxruntime-node` version matches requirements, preventing obscure runtime crashes.
+
+## Operational Notes
+- If you encounter errors related to `onnxruntime-node` after upgrading, please ensure you run `npm install` in the extension directory to apply the pinned version.
+
 # Release v1.2.0
 
 ## Summary

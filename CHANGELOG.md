@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-02-08
+
+### Features
+- feat(rag): implement incremental indexing and overhaul vault processing
+
+### Fixed
+- fix: pin onnxruntime-node to 1.14.0 and add runtime compatibility check
+
 ## [1.2.0] - 2026-02-07
 
 ### Added
