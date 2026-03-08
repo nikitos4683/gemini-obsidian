@@ -2982,7 +2982,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve2.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -3009,7 +3009,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve2(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3224,8 +3224,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path6) {
-      let input = path6;
+    function removeDotSegments(path7) {
+      let input = path7;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3424,8 +3424,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path6, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
+        const [path7, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -3584,7 +3584,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options2) {
+    function resolve2(baseURI, relativeURI, options2) {
       const schemelessOptions = options2 ? Object.assign({ scheme: "null" }, options2) : { scheme: "null" };
       const resolved = resolveComponent(parse5(baseURI, schemelessOptions), parse5(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3811,7 +3811,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve,
+      resolve: resolve2,
       resolveComponent,
       equal,
       serialize,
@@ -10093,11 +10093,11 @@ var require_excerpt = __commonJS({
       if (typeof opts.excerpt === "function") {
         return opts.excerpt(file2, opts);
       }
-      const sep2 = file2.data.excerpt_separator || opts.excerpt_separator;
-      if (sep2 == null && (opts.excerpt === false || opts.excerpt == null)) {
+      const sep3 = file2.data.excerpt_separator || opts.excerpt_separator;
+      if (sep3 == null && (opts.excerpt === false || opts.excerpt == null)) {
         return file2;
       }
-      const delimiter = typeof opts.excerpt === "string" ? opts.excerpt : sep2 || opts.delimiters[0];
+      const delimiter = typeof opts.excerpt === "string" ? opts.excerpt : sep3 || opts.delimiters[0];
       const idx = file2.content.indexOf(delimiter);
       if (idx !== -1) {
         file2.excerpt = file2.content.slice(0, idx);
@@ -10409,7 +10409,7 @@ var require_is_buffer = __commonJS({
 var require_md5 = __commonJS({
   "node_modules/md5/md5.js"(exports2, module2) {
     (function() {
-      var crypt = require_crypt(), utf8 = require_charenc().utf8, isBuffer = require_is_buffer(), bin = require_charenc().bin, md52 = function(message, options2) {
+      var crypt = require_crypt(), utf8 = require_charenc().utf8, isBuffer = require_is_buffer(), bin = require_charenc().bin, md53 = function(message, options2) {
         if (message.constructor == String)
           if (options2 && options2.encoding === "binary")
             message = bin.stringToBytes(message);
@@ -10425,7 +10425,7 @@ var require_md5 = __commonJS({
         }
         m[l >>> 5] |= 128 << l % 32;
         m[(l + 64 >>> 9 << 4) + 14] = l;
-        var FF = md52._ff, GG = md52._gg, HH = md52._hh, II = md52._ii;
+        var FF = md53._ff, GG = md53._gg, HH = md53._hh, II = md53._ii;
         for (var i2 = 0; i2 < m.length; i2 += 16) {
           var aa = a, bb = b, cc = c, dd = d;
           a = FF(a, b, c, d, m[i2 + 0], 7, -680876936);
@@ -10499,28 +10499,28 @@ var require_md5 = __commonJS({
         }
         return crypt.endian([a, b, c, d]);
       };
-      md52._ff = function(a, b, c, d, x, s, t) {
+      md53._ff = function(a, b, c, d, x, s, t) {
         var n = a + (b & c | ~b & d) + (x >>> 0) + t;
         return (n << s | n >>> 32 - s) + b;
       };
-      md52._gg = function(a, b, c, d, x, s, t) {
+      md53._gg = function(a, b, c, d, x, s, t) {
         var n = a + (b & d | c & ~d) + (x >>> 0) + t;
         return (n << s | n >>> 32 - s) + b;
       };
-      md52._hh = function(a, b, c, d, x, s, t) {
+      md53._hh = function(a, b, c, d, x, s, t) {
         var n = a + (b ^ c ^ d) + (x >>> 0) + t;
         return (n << s | n >>> 32 - s) + b;
       };
-      md52._ii = function(a, b, c, d, x, s, t) {
+      md53._ii = function(a, b, c, d, x, s, t) {
         var n = a + (c ^ (b | ~d)) + (x >>> 0) + t;
         return (n << s | n >>> 32 - s) + b;
       };
-      md52._blocksize = 16;
-      md52._digestsize = 16;
+      md53._blocksize = 16;
+      md53._digestsize = 16;
       module2.exports = function(message, options2) {
         if (message === void 0 || message === null)
           throw new Error("Illegal argument " + message);
-        var digestbytes = crypt.wordsToBytes(md52(message, options2));
+        var digestbytes = crypt.wordsToBytes(md53(message, options2));
         return options2 && options2.asBytes ? digestbytes : options2 && options2.asString ? bin.bytesToString(digestbytes) : crypt.bytesToHex(digestbytes);
       };
     })();
@@ -24211,8 +24211,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path6, errorMaps, issueData } = params;
-  const fullPath = [...path6, ...issueData.path || []];
+  const { data, path: path7, errorMaps, issueData } = params;
+  const fullPath = [...path7, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -24327,11 +24327,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path6, key) {
+  constructor(parent, value, path7, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path6;
+    this._path = path7;
     this._key = key;
   }
   get path() {
@@ -27975,10 +27975,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -28361,11 +28361,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -36619,7 +36619,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
         options2?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -36636,7 +36636,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options2) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options2 ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -36714,7 +36714,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve2(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -36975,12 +36975,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve2, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -37709,12 +37709,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -37722,7 +37722,7 @@ var StdioServerTransport = class {
 
 // src/index.ts
 var fs4 = __toESM(require("fs/promises"));
-var path5 = __toESM(require("path"));
+var path6 = __toESM(require("path"));
 var os2 = __toESM(require("os"));
 
 // node_modules/@isaacs/balanced-match/dist/esm/index.js
@@ -41441,10 +41441,10 @@ var Minipass = class extends import_node_events.EventEmitter {
    * Return a void Promise that resolves once the stream ends.
    */
   async promise() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       this.on(DESTROYED, () => reject(new Error("stream destroyed")));
       this.on("error", (er) => reject(er));
-      this.on("end", () => resolve());
+      this.on("end", () => resolve2());
     });
   }
   /**
@@ -41468,7 +41468,7 @@ var Minipass = class extends import_node_events.EventEmitter {
         return Promise.resolve({ done: false, value: res });
       if (this[EOF])
         return stop();
-      let resolve;
+      let resolve2;
       let reject;
       const onerr = (er) => {
         this.off("data", ondata);
@@ -41482,19 +41482,19 @@ var Minipass = class extends import_node_events.EventEmitter {
         this.off("end", onend);
         this.off(DESTROYED, ondestroy);
         this.pause();
-        resolve({ value, done: !!this[EOF] });
+        resolve2({ value, done: !!this[EOF] });
       };
       const onend = () => {
         this.off("error", onerr);
         this.off("data", ondata);
         this.off(DESTROYED, ondestroy);
         stop();
-        resolve({ done: true, value: void 0 });
+        resolve2({ done: true, value: void 0 });
       };
       const ondestroy = () => onerr(new Error("stream destroyed"));
       return new Promise((res2, rej) => {
         reject = rej;
-        resolve = res2;
+        resolve2 = res2;
         this.once(DESTROYED, ondestroy);
         this.once("error", onerr);
         this.once("end", onend);
@@ -41857,12 +41857,12 @@ var PathBase = class {
   /**
    * Get the Path object referenced by the string path, resolved from this Path
    */
-  resolve(path6) {
-    if (!path6) {
+  resolve(path7) {
+    if (!path7) {
       return this;
     }
-    const rootPath = this.getRootString(path6);
-    const dir = path6.substring(rootPath.length);
+    const rootPath = this.getRootString(path7);
+    const dir = path7.substring(rootPath.length);
     const dirParts = dir.split(this.splitSep);
     const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
     return result;
@@ -42466,9 +42466,9 @@ var PathBase = class {
     if (this.#asyncReaddirInFlight) {
       await this.#asyncReaddirInFlight;
     } else {
-      let resolve = () => {
+      let resolve2 = () => {
       };
-      this.#asyncReaddirInFlight = new Promise((res) => resolve = res);
+      this.#asyncReaddirInFlight = new Promise((res) => resolve2 = res);
       try {
         for (const e of await this.#fs.promises.readdir(fullpath, {
           withFileTypes: true
@@ -42481,7 +42481,7 @@ var PathBase = class {
         children.provisional = 0;
       }
       this.#asyncReaddirInFlight = void 0;
-      resolve();
+      resolve2();
     }
     return children.slice(0, children.provisional);
   }
@@ -42614,8 +42614,8 @@ var PathWin32 = class _PathWin32 extends PathBase {
   /**
    * @internal
    */
-  getRootString(path6) {
-    return import_node_path.win32.parse(path6).root;
+  getRootString(path7) {
+    return import_node_path.win32.parse(path7).root;
   }
   /**
    * @internal
@@ -42661,8 +42661,8 @@ var PathPosix = class _PathPosix extends PathBase {
   /**
    * @internal
    */
-  getRootString(path6) {
-    return path6.startsWith("/") ? "/" : "";
+  getRootString(path7) {
+    return path7.startsWith("/") ? "/" : "";
   }
   /**
    * @internal
@@ -42711,7 +42711,7 @@ var PathScurryBase = class {
    *
    * @internal
    */
-  constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs5 = defaultFS } = {}) {
+  constructor(cwd = process.cwd(), pathImpl, sep3, { nocase, childrenCacheSize = 16 * 1024, fs: fs5 = defaultFS } = {}) {
     this.#fs = fsFromOption(fs5);
     if (cwd instanceof URL || cwd.startsWith("file://")) {
       cwd = (0, import_node_url.fileURLToPath)(cwd);
@@ -42722,7 +42722,7 @@ var PathScurryBase = class {
     this.#resolveCache = new ResolveCache();
     this.#resolvePosixCache = new ResolveCache();
     this.#children = new ChildrenCache(childrenCacheSize);
-    const split = cwdPath.substring(this.rootPath.length).split(sep2);
+    const split = cwdPath.substring(this.rootPath.length).split(sep3);
     if (split.length === 1 && !split[0]) {
       split.pop();
     }
@@ -42751,11 +42751,11 @@ var PathScurryBase = class {
   /**
    * Get the depth of a provided path, string, or the cwd
    */
-  depth(path6 = this.cwd) {
-    if (typeof path6 === "string") {
-      path6 = this.cwd.resolve(path6);
+  depth(path7 = this.cwd) {
+    if (typeof path7 === "string") {
+      path7 = this.cwd.resolve(path7);
     }
-    return path6.depth();
+    return path7.depth();
   }
   /**
    * Return the cache of child entries.  Exposed so subclasses can create
@@ -43242,9 +43242,9 @@ var PathScurryBase = class {
     process4();
     return results;
   }
-  chdir(path6 = this.cwd) {
+  chdir(path7 = this.cwd) {
     const oldCwd = this.cwd;
-    this.cwd = typeof path6 === "string" ? this.cwd.resolve(path6) : path6;
+    this.cwd = typeof path7 === "string" ? this.cwd.resolve(path7) : path7;
     this.cwd[setAsCwd](oldCwd);
   }
 };
@@ -43600,8 +43600,8 @@ var MatchRecord = class {
   }
   // match, absolute, ifdir
   entries() {
-    return [...this.store.entries()].map(([path6, n]) => [
-      path6,
+    return [...this.store.entries()].map(([path7, n]) => [
+      path7,
       !!(n & 2),
       !!(n & 1)
     ]);
@@ -43806,9 +43806,9 @@ var GlobUtil = class {
   signal;
   maxDepth;
   includeChildMatches;
-  constructor(patterns, path6, opts) {
+  constructor(patterns, path7, opts) {
     this.patterns = patterns;
-    this.path = path6;
+    this.path = path7;
     this.opts = opts;
     this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
     this.includeChildMatches = opts.includeChildMatches !== false;
@@ -43827,11 +43827,11 @@ var GlobUtil = class {
       });
     }
   }
-  #ignored(path6) {
-    return this.seen.has(path6) || !!this.#ignore?.ignored?.(path6);
+  #ignored(path7) {
+    return this.seen.has(path7) || !!this.#ignore?.ignored?.(path7);
   }
-  #childrenIgnored(path6) {
-    return !!this.#ignore?.childrenIgnored?.(path6);
+  #childrenIgnored(path7) {
+    return !!this.#ignore?.childrenIgnored?.(path7);
   }
   // backpressure mechanism
   pause() {
@@ -44046,8 +44046,8 @@ var GlobUtil = class {
 };
 var GlobWalker = class extends GlobUtil {
   matches = /* @__PURE__ */ new Set();
-  constructor(patterns, path6, opts) {
-    super(patterns, path6, opts);
+  constructor(patterns, path7, opts) {
+    super(patterns, path7, opts);
   }
   matchEmit(e) {
     this.matches.add(e);
@@ -44084,8 +44084,8 @@ var GlobWalker = class extends GlobUtil {
 };
 var GlobStream = class extends GlobUtil {
   results;
-  constructor(patterns, path6, opts) {
-    super(patterns, path6, opts);
+  constructor(patterns, path7, opts) {
+    super(patterns, path7, opts);
     this.results = new Minipass({
       signal: this.signal,
       objectMode: true
@@ -44384,10 +44384,10 @@ var import_gray_matter2 = __toESM(require_gray_matter());
 // src/rag/store.ts
 var lancedb = __toESM(require("@lancedb/lancedb"));
 var fs3 = __toESM(require("fs/promises"));
-var path4 = __toESM(require("path"));
+var path5 = __toESM(require("path"));
 var os = __toESM(require("os"));
 var import_gray_matter = __toESM(require_gray_matter());
-var import_md5 = __toESM(require_md5());
+var import_md52 = __toESM(require_md5());
 
 // node_modules/@xenova/transformers/src/utils/core.js
 function dispatchCallback(progress_callback, data) {
@@ -44700,8 +44700,8 @@ var FileCache = class {
    * Instantiate a `FileCache` object.
    * @param {string} path 
    */
-  constructor(path6) {
-    this.path = path6;
+  constructor(path7) {
+    this.path = path7;
   }
   /**
    * Checks whether the given request is in the cache.
@@ -56281,25 +56281,25 @@ var RawImage = class _RawImage {
    * Save the image to the given path.
    * @param {string} path The path to save the image to.
    */
-  async save(path6) {
+  async save(path7) {
     if (BROWSER_ENV) {
       if (WEBWORKER_ENV) {
         throw new Error("Unable to save an image from a Web Worker.");
       }
-      const extension = path6.split(".").pop().toLowerCase();
+      const extension = path7.split(".").pop().toLowerCase();
       const mime = CONTENT_TYPE_MAP.get(extension) ?? "image/png";
       const blob = await this.toBlob(mime);
       const dataURL = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
       downloadLink.href = dataURL;
-      downloadLink.download = path6;
+      downloadLink.download = path7;
       downloadLink.click();
       downloadLink.remove();
     } else if (!env.useFS) {
       throw new Error("Unable to save the image because filesystem is disabled in this environment.");
     } else {
       const img = this.toSharp();
-      return await img.toFile(path6);
+      return await img.toFile(path7);
     }
   }
   toSharp() {
@@ -59862,15 +59862,15 @@ async function loadItems(mapping, model, pretrainedOptions) {
     if (!cls) continue;
     let promise2;
     if (Array.isArray(cls)) {
-      promise2 = new Promise(async (resolve, reject) => {
+      promise2 = new Promise(async (resolve2, reject) => {
         let e;
         for (let c of cls) {
           if (c === null) {
-            resolve(null);
+            resolve2(null);
             return;
           }
           try {
-            resolve(await c.from_pretrained(model, pretrainedOptions));
+            resolve2(await c.from_pretrained(model, pretrainedOptions));
             return;
           } catch (err) {
             e = err;
@@ -59929,9 +59929,159 @@ var Embedder = class _Embedder {
   }
 };
 
+// src/rag/chunking.ts
+var import_md5 = __toESM(require_md5());
+var DEFAULTS = {
+  minChunkChars: 40,
+  maxChunkChars: 1800,
+  targetChunkChars: 700
+};
+function splitTextForEmbedding(text, maxChars = DEFAULTS.maxChunkChars) {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (normalized.length <= maxChars) return [normalized];
+  const segments = [];
+  const sentenceParts = normalized.split(/(?<=[.!?])\s+/);
+  let current = "";
+  for (const part of sentenceParts) {
+    if (part.length > maxChars) {
+      if (current.length > 0) {
+        segments.push(current);
+        current = "";
+      }
+      for (let i2 = 0; i2 < part.length; i2 += maxChars) {
+        segments.push(part.slice(i2, i2 + maxChars));
+      }
+      continue;
+    }
+    const candidate = current.length > 0 ? `${current} ${part}` : part;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+    } else {
+      if (current.length > 0) segments.push(current);
+      current = part;
+    }
+  }
+  if (current.length > 0) segments.push(current);
+  return segments;
+}
+function mergeSegmentsForEmbedding(segments, targetChars) {
+  if (segments.length === 0) return [];
+  const merged = [];
+  let current = "";
+  for (const segment of segments) {
+    if (segment.length >= targetChars) {
+      if (current.length > 0) {
+        merged.push(current);
+        current = "";
+      }
+      merged.push(segment);
+      continue;
+    }
+    const candidate = current.length > 0 ? `${current}
+
+${segment}` : segment;
+    if (candidate.length <= targetChars) {
+      current = candidate;
+    } else {
+      if (current.length > 0) merged.push(current);
+      current = segment;
+    }
+  }
+  if (current.length > 0) merged.push(current);
+  return merged;
+}
+function buildEmbeddingInputs(relativePath, body, options2) {
+  const minChunkChars = options2?.minChunkChars ?? DEFAULTS.minChunkChars;
+  const maxChunkChars = options2?.maxChunkChars ?? DEFAULTS.maxChunkChars;
+  const targetChunkChars = options2?.targetChunkChars ?? DEFAULTS.targetChunkChars;
+  const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+  const rawSegments = [];
+  const chunkMetadata = [];
+  for (let i2 = 0; i2 < paragraphs.length; i2++) {
+    const paragraph = paragraphs[i2].trim();
+    if (paragraph.length < minChunkChars) continue;
+    const segments = splitTextForEmbedding(paragraph, maxChunkChars);
+    for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
+      const segment = segments[segmentIndex];
+      if (segment.length < minChunkChars) continue;
+      rawSegments.push(segment);
+    }
+  }
+  const textsToEmbed = mergeSegmentsForEmbedding(rawSegments, targetChunkChars);
+  for (let chunkIndex = 0; chunkIndex < textsToEmbed.length; chunkIndex++) {
+    chunkMetadata.push({
+      id: (0, import_md5.default)(`${relativePath}-${chunkIndex}`),
+      path: relativePath,
+      text: textsToEmbed[chunkIndex]
+    });
+  }
+  return { textsToEmbed, chunkMetadata };
+}
+
+// src/utils.ts
+var path4 = __toESM(require("path"));
+function getSafeFilePath(vaultPath, userInputPath) {
+  const resolvedVault = path4.resolve(vaultPath);
+  const resolvedTarget = path4.resolve(resolvedVault, userInputPath);
+  if (!resolvedTarget.startsWith(resolvedVault + path4.sep) && resolvedTarget !== resolvedVault) {
+    throw new Error("Security Error: Path traversal detected.");
+  }
+  return resolvedTarget;
+}
+function extractWikilinks(content) {
+  const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
+  const links = [];
+  let match2;
+  while ((match2 = regex.exec(content)) !== null) {
+    links.push(match2[1]);
+  }
+  return [...new Set(links)];
+}
+function findSectionRange(content, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const headingRegex = new RegExp(`^(#{1,6})\\s+${escapedHeading}\\s*$`, "m");
+  const match2 = headingRegex.exec(content);
+  if (!match2) return null;
+  const level = match2[1].length;
+  const headingStart = match2.index;
+  const headingEnd = headingStart + match2[0].length;
+  const bodyStart = headingEnd;
+  const rest = content.slice(bodyStart);
+  const nextHeadingRegex = new RegExp(`^#{1,${level}}\\s`, "m");
+  const nextMatch = nextHeadingRegex.exec(rest);
+  const bodyEnd = nextMatch ? bodyStart + nextMatch.index : content.length;
+  return { headingStart, headingEnd, bodyStart, bodyEnd, level };
+}
+function replaceSection(fileContent, range3, newBody) {
+  return fileContent.slice(0, range3.bodyStart) + "\n" + newBody + "\n" + fileContent.slice(range3.bodyEnd);
+}
+function insertAtHeading(fileContent, heading, content, position, range3) {
+  if (range3) {
+    if (position === "beginning") {
+      return fileContent.slice(0, range3.bodyStart) + "\n" + content + fileContent.slice(range3.bodyStart);
+    }
+    const before = fileContent.slice(0, range3.bodyEnd);
+    const sep3 = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+    return before + sep3 + content + "\n" + fileContent.slice(range3.bodyEnd);
+  }
+  return fileContent + `
+
+## ${heading}
+${content}`;
+}
+
 // src/rag/store.ts
-var DB_PATH = path4.join(os.homedir(), ".gemini-obsidian-lancedb");
-var HASH_PATH = path4.join(os.homedir(), ".gemini-obsidian-file-hashes.json");
+function chunkingOptionsFromEnv() {
+  const minRaw = Number(process.env.GEMINI_OBSIDIAN_MIN_CHUNK_CHARS ?? "40");
+  const maxRaw = Number(process.env.GEMINI_OBSIDIAN_MAX_CHUNK_CHARS ?? "1800");
+  const targetRaw = Number(process.env.GEMINI_OBSIDIAN_TARGET_CHUNK_CHARS ?? "700");
+  const min2 = Number.isFinite(minRaw) && minRaw > 0 ? Math.floor(minRaw) : 40;
+  const max2 = Number.isFinite(maxRaw) && maxRaw > 0 ? Math.floor(maxRaw) : 1800;
+  const target = Number.isFinite(targetRaw) && targetRaw > min2 ? Math.floor(targetRaw) : 700;
+  return { minChunkChars: min2, maxChunkChars: max2, targetChunkChars: target };
+}
+var DB_PATH = path5.join(os.homedir(), ".gemini-obsidian-lancedb");
+var HASH_PATH = path5.join(os.homedir(), ".gemini-obsidian-file-hashes.json");
 var VaultIndexer = class {
   db = null;
   table = null;
@@ -59992,97 +60142,13 @@ var VaultIndexer = class {
     }
     return recovered;
   }
-  splitTextForEmbedding(text, maxChars = 1800) {
-    const normalized = text.trim().replace(/\s+/g, " ");
-    if (normalized.length <= maxChars) return [normalized];
-    const segments = [];
-    const sentenceParts = normalized.split(/(?<=[.!?])\s+/);
-    let current = "";
-    for (const part of sentenceParts) {
-      if (part.length > maxChars) {
-        if (current.length > 0) {
-          segments.push(current);
-          current = "";
-        }
-        for (let i2 = 0; i2 < part.length; i2 += maxChars) {
-          segments.push(part.slice(i2, i2 + maxChars));
-        }
-        continue;
-      }
-      const candidate = current.length > 0 ? `${current} ${part}` : part;
-      if (candidate.length <= maxChars) {
-        current = candidate;
-      } else {
-        if (current.length > 0) segments.push(current);
-        current = part;
-      }
-    }
-    if (current.length > 0) segments.push(current);
-    return segments;
-  }
-  mergeSegmentsForEmbedding(segments, targetChars) {
-    if (segments.length === 0) return [];
-    const merged = [];
-    let current = "";
-    for (const segment of segments) {
-      if (segment.length >= targetChars) {
-        if (current.length > 0) {
-          merged.push(current);
-          current = "";
-        }
-        merged.push(segment);
-        continue;
-      }
-      const candidate = current.length > 0 ? `${current}
-
-${segment}` : segment;
-      if (candidate.length <= targetChars) {
-        current = candidate;
-      } else {
-        if (current.length > 0) merged.push(current);
-        current = segment;
-      }
-    }
-    if (current.length > 0) merged.push(current);
-    return merged;
-  }
-  buildEmbeddingInputs(relativePath, body) {
-    const minChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MIN_CHUNK_CHARS ?? "40");
-    const minChunkChars = Number.isFinite(minChunkCharsRaw) && minChunkCharsRaw > 0 ? Math.floor(minChunkCharsRaw) : 40;
-    const maxChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MAX_CHUNK_CHARS ?? "1800");
-    const maxChunkChars = Number.isFinite(maxChunkCharsRaw) && maxChunkCharsRaw > 0 ? Math.floor(maxChunkCharsRaw) : 1800;
-    const targetChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_TARGET_CHUNK_CHARS ?? "700");
-    const targetChunkChars = Number.isFinite(targetChunkCharsRaw) && targetChunkCharsRaw > minChunkChars ? Math.floor(targetChunkCharsRaw) : 700;
-    const paragraphs = body.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
-    const rawSegments = [];
-    const chunkMetadata = [];
-    for (let i2 = 0; i2 < paragraphs.length; i2++) {
-      const paragraph = paragraphs[i2].trim();
-      if (paragraph.length < minChunkChars) continue;
-      const segments = this.splitTextForEmbedding(paragraph, maxChunkChars);
-      for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
-        const segment = segments[segmentIndex];
-        if (segment.length < minChunkChars) continue;
-        rawSegments.push(segment);
-      }
-    }
-    const textsToEmbed = this.mergeSegmentsForEmbedding(rawSegments, targetChunkChars);
-    for (let chunkIndex = 0; chunkIndex < textsToEmbed.length; chunkIndex++) {
-      chunkMetadata.push({
-        id: (0, import_md5.default)(`${relativePath}-${chunkIndex}`),
-        path: relativePath,
-        text: textsToEmbed[chunkIndex]
-      });
-    }
-    return { textsToEmbed, chunkMetadata };
-  }
   async indexFile(vaultPath, relativePath) {
     const embedder = Embedder.getInstance();
-    const filePath = path4.join(vaultPath, relativePath);
+    const filePath = getSafeFilePath(vaultPath, relativePath);
     try {
       const content = await fs3.readFile(filePath, "utf-8");
       const { data, content: body } = (0, import_gray_matter.default)(content);
-      const { textsToEmbed, chunkMetadata } = this.buildEmbeddingInputs(relativePath, body);
+      const { textsToEmbed, chunkMetadata } = buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
       if (textsToEmbed.length > 0) {
         const chunks = await this.embedWithFallback(embedder, textsToEmbed, chunkMetadata);
         if (chunks.length === 0) {
@@ -60157,15 +60223,15 @@ ${segment}` : segment;
         batch.map(async (filePath) => {
           try {
             const content = await fs3.readFile(filePath, "utf-8");
-            const relativePath = path4.relative(vaultPath, filePath);
-            const contentHash = (0, import_md5.default)(content);
+            const relativePath = path5.relative(vaultPath, filePath);
+            const contentHash = (0, import_md52.default)(content);
             currentHashes[relativePath] = contentHash;
             if (canIncremental && previousHashes[relativePath] === contentHash) {
               return null;
             }
             changedPaths.push(relativePath);
             const { content: body } = (0, import_gray_matter.default)(content);
-            return this.buildEmbeddingInputs(relativePath, body);
+            return buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
           } catch (err) {
             console.error(`Failed to process file ${filePath}:`, err);
             return null;
@@ -60326,7 +60392,7 @@ try {
 }
 var VAULT_PATH = process.env.OBSIDIAN_VAULT_PATH || null;
 var indexer = new VaultIndexer();
-var CONFIG_PATH = path5.join(os2.homedir(), ".gemini-obsidian.config.json");
+var CONFIG_PATH = path6.join(os2.homedir(), ".gemini-obsidian.config.json");
 async function saveConfig(vaultPath) {
   try {
     await fs4.writeFile(CONFIG_PATH, JSON.stringify({ vault_path: vaultPath }), "utf-8");
@@ -60350,21 +60416,21 @@ function getVaultPath(providedPath) {
   return p;
 }
 async function readStdin() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     let data = "";
     process.stdin.setEncoding("utf-8");
     process.stdin.on("data", (chunk) => {
       data += chunk;
     });
     process.stdin.on("end", () => {
-      resolve(data);
+      resolve2(data);
     });
     process.stdin.on("error", (err) => {
       reject(err);
     });
     setTimeout(() => {
       if (data === "") {
-        resolve("");
+        resolve2("");
       }
     }, 1e3);
   });
@@ -60374,7 +60440,7 @@ async function readStdin() {
     VAULT_PATH = await loadConfig2();
   }
   const args = process.argv.slice(2);
-  const knownTools = ["obsidian_list_notes", "obsidian_read_note", "obsidian_search_notes", "obsidian_rag_index", "obsidian_rag_query", "obsidian_set_vault", "obsidian_create_note", "obsidian_append_note", "obsidian_get_daily_note", "obsidian_get_backlinks", "obsidian_get_links", "obsidian_move_note", "obsidian_update_frontmatter", "obsidian_append_daily_log"];
+  const knownTools = ["obsidian_list_notes", "obsidian_read_note", "obsidian_search_notes", "obsidian_rag_index", "obsidian_rag_query", "obsidian_set_vault", "obsidian_create_note", "obsidian_append_note", "obsidian_get_daily_note", "obsidian_get_backlinks", "obsidian_get_links", "obsidian_move_note", "obsidian_update_frontmatter", "obsidian_append_daily_log", "obsidian_replace_section", "obsidian_insert_at_heading"];
   if (args.length > 0 && knownTools.includes(args[0])) {
     const toolName = args[0];
     const toolArgs = args.slice(1);
@@ -60395,37 +60461,37 @@ async function readStdin() {
       if (toolName === "obsidian_list_notes") {
         const vp = getVaultPath(parsedArgs.vault_path);
         const sub = parsedArgs.subfolder ? String(parsedArgs.subfolder) : "**";
-        const pattern = path5.join(sub, "*.md");
+        const pattern = path6.join(sub, "*.md");
         const files = await glob(pattern, { cwd: vp });
         result = JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `
 ...and ${files.length - 100} more.` : "");
       } else if (toolName === "obsidian_read_note") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const filePath = path5.join(vp, String(parsedArgs.file_path));
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
         result = await fs4.readFile(filePath, "utf-8");
       } else if (toolName === "obsidian_create_note") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const filePath = path5.join(vp, String(parsedArgs.file_path));
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
         const content = String(parsedArgs.content || "");
-        await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+        await fs4.mkdir(path6.dirname(filePath), { recursive: true });
         await fs4.writeFile(filePath, content, "utf-8");
         result = `Created note: ${parsedArgs.file_path}`;
       } else if (toolName === "obsidian_append_note") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const filePath = path5.join(vp, String(parsedArgs.file_path));
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
         const content = String(parsedArgs.content || "");
         await fs4.appendFile(filePath, "\n" + content, "utf-8");
         result = `Appended to note: ${parsedArgs.file_path}`;
       } else if (toolName === "obsidian_get_daily_note") {
         const vp = getVaultPath(parsedArgs.vault_path);
         const dateStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        const dailyFolder = await fs4.stat(path5.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
+        const dailyFolder = await fs4.stat(path6.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
         const fileName = `${dateStr}.md`;
-        const filePath = path5.join(vp, dailyFolder, fileName);
+        const filePath = path6.join(vp, dailyFolder, fileName);
         try {
           result = await fs4.readFile(filePath, "utf-8");
         } catch (e) {
-          await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+          await fs4.mkdir(path6.dirname(filePath), { recursive: true });
           const content = `# ${dateStr}
 
 `;
@@ -60443,7 +60509,7 @@ async function readStdin() {
             continue;
           }
           try {
-            const c = await fs4.readFile(path5.join(vp, f), "utf-8");
+            const c = await fs4.readFile(path6.join(vp, f), "utf-8");
             if (c.toLowerCase().includes(query)) matches.push(f);
           } catch (e) {
           }
@@ -60489,7 +60555,7 @@ Content: ${r.text}`).join("\n---\n");
           const batch = files.slice(i2, i2 + batchSize);
           await Promise.all(batch.map(async (f) => {
             try {
-              const content = await fs4.readFile(path5.join(vp, f), "utf-8");
+              const content = await fs4.readFile(path6.join(vp, f), "utf-8");
               if (linkRegex.test(content)) {
                 backlinks.push(f);
               }
@@ -60505,25 +60571,19 @@ Content: ${r.text}`).join("\n---\n");
         }
       } else if (toolName === "obsidian_get_links") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const filePath = path5.join(vp, String(parsedArgs.file_path));
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
         const content = await fs4.readFile(filePath, "utf-8");
-        const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
-        const links = [];
-        let match2;
-        while ((match2 = regex.exec(content)) !== null) {
-          links.push(match2[1]);
-        }
-        result = JSON.stringify([...new Set(links)], null, 2);
+        result = JSON.stringify(extractWikilinks(content), null, 2);
       } else if (toolName === "obsidian_move_note") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const source = path5.join(vp, String(parsedArgs.source_path));
-        const dest = path5.join(vp, String(parsedArgs.dest_path));
-        await fs4.mkdir(path5.dirname(dest), { recursive: true });
+        const source = getSafeFilePath(vp, String(parsedArgs.source_path));
+        const dest = getSafeFilePath(vp, String(parsedArgs.dest_path));
+        await fs4.mkdir(path6.dirname(dest), { recursive: true });
         await fs4.rename(source, dest);
         result = `Moved ${parsedArgs.source_path} to ${parsedArgs.dest_path}`;
       } else if (toolName === "obsidian_update_frontmatter") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const filePath = path5.join(vp, String(parsedArgs.file_path));
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
         const key = String(parsedArgs.key);
         let value = parsedArgs.value;
         try {
@@ -60536,33 +60596,49 @@ Content: ${r.text}`).join("\n---\n");
         const updatedContent = import_gray_matter2.default.stringify(parsed.content, parsed.data);
         await fs4.writeFile(filePath, updatedContent, "utf-8");
         result = `Updated frontmatter "${key}" in ${parsedArgs.file_path}`;
+      } else if (toolName === "obsidian_replace_section") {
+        const vp = getVaultPath(parsedArgs.vault_path);
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+        const heading = String(parsedArgs.heading);
+        const content = String(parsedArgs.content);
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const range3 = findSectionRange(fileContent, heading);
+        if (!range3) throw new Error(`Heading "${heading}" not found in ${parsedArgs.file_path}`);
+        await fs4.writeFile(filePath, replaceSection(fileContent, range3, content), "utf-8");
+        result = `Replaced section "${heading}" in ${parsedArgs.file_path}`;
+      } else if (toolName === "obsidian_insert_at_heading") {
+        const vp = getVaultPath(parsedArgs.vault_path);
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+        const heading = String(parsedArgs.heading);
+        const content = String(parsedArgs.content);
+        const position = parsedArgs.position || "end";
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const range3 = findSectionRange(fileContent, heading);
+        await fs4.writeFile(filePath, insertAtHeading(fileContent, heading, content, position, range3), "utf-8");
+        result = `Inserted content under "${heading}" in ${parsedArgs.file_path}`;
       } else if (toolName === "obsidian_append_daily_log") {
         const vp = getVaultPath(parsedArgs.vault_path);
         const heading = String(parsedArgs.heading);
         const content = String(parsedArgs.content);
         const dateStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        const dailyFolder = await fs4.stat(path5.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
+        const dailyFolder = await fs4.stat(path6.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
         const fileName = `${dateStr}.md`;
-        const filePath = path5.join(vp, dailyFolder, fileName);
+        const filePath = path6.join(vp, dailyFolder, fileName);
         let fileContent = "";
         try {
           fileContent = await fs4.readFile(filePath, "utf-8");
         } catch (e) {
-          await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+          await fs4.mkdir(path6.dirname(filePath), { recursive: true });
           fileContent = `# ${dateStr}
 
 `;
         }
-        const headingRegex = new RegExp(`^#+\\s+${heading}\\s*$`, "m");
         const timestamp = (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         const entry = `
 - [${timestamp}] ${content}`;
-        if (headingRegex.test(fileContent)) {
-          const match2 = headingRegex.exec(fileContent);
-          if (match2) {
-            const headingIndex = match2.index + match2[0].length;
-            fileContent = fileContent.slice(0, headingIndex) + entry + fileContent.slice(headingIndex);
-          }
+        const range3 = findSectionRange(fileContent, heading);
+        if (range3) {
+          fileContent = fileContent.slice(0, range3.headingEnd) + entry + fileContent.slice(range3.headingEnd);
         } else {
           fileContent += `
 
@@ -60764,6 +60840,35 @@ Content: ${r.text}`).join("\n---\n");
             },
             required: ["heading", "content"]
           }
+        },
+        {
+          name: "obsidian_replace_section",
+          description: "Replace the body under a heading (up to the next heading of equal/higher level, or EOF). The heading line itself is preserved.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              file_path: { type: "string", description: "Relative path to the note" },
+              heading: { type: "string", description: 'Heading text to find (e.g. "Status")' },
+              content: { type: "string", description: "New section body (replaces everything between heading and next same/higher-level heading)" },
+              vault_path: { type: "string", description: "Optional vault path override" }
+            },
+            required: ["file_path", "heading", "content"]
+          }
+        },
+        {
+          name: "obsidian_insert_at_heading",
+          description: "Insert content under a specific heading. If heading not found, appends it as a new ## section.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              file_path: { type: "string", description: "Relative path to the note" },
+              heading: { type: "string", description: 'Heading text to find (e.g. "Notes")' },
+              content: { type: "string", description: "Text to insert" },
+              position: { type: "string", enum: ["beginning", "end"], description: "Insert at beginning or end of section (default: end)" },
+              vault_path: { type: "string", description: "Optional vault path override" }
+            },
+            required: ["file_path", "heading", "content"]
+          }
         }
       ]
     };
@@ -60779,28 +60884,28 @@ Content: ${r.text}`).join("\n---\n");
       if (name2 === "obsidian_list_notes") {
         const vp = getVaultPath(args2?.vault_path);
         const sub = args2?.subfolder ? String(args2.subfolder) : "**";
-        const pattern = path5.join(sub, "*.md");
+        const pattern = path6.join(sub, "*.md");
         const files = await glob(pattern, { cwd: vp });
         return { content: [{ type: "text", text: JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `
 ...and ${files.length - 100} more.` : "") }] };
       }
       if (name2 === "obsidian_read_note") {
         const vp = getVaultPath(args2?.vault_path);
-        const filePath = path5.join(vp, String(args2?.file_path));
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
         const content = await fs4.readFile(filePath, "utf-8");
         return { content: [{ type: "text", text: content }] };
       }
       if (name2 === "obsidian_create_note") {
         const vp = getVaultPath(args2?.vault_path);
-        const filePath = path5.join(vp, String(args2?.file_path));
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
         const content = String(args2?.content || "");
-        await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+        await fs4.mkdir(path6.dirname(filePath), { recursive: true });
         await fs4.writeFile(filePath, content, "utf-8");
         return { content: [{ type: "text", text: `Created note: ${args2?.file_path}` }] };
       }
       if (name2 === "obsidian_append_note") {
         const vp = getVaultPath(args2?.vault_path);
-        const filePath = path5.join(vp, String(args2?.file_path));
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
         const content = String(args2?.content || "");
         await fs4.appendFile(filePath, "\n" + content, "utf-8");
         return { content: [{ type: "text", text: `Appended to note: ${args2?.file_path}` }] };
@@ -60808,14 +60913,14 @@ Content: ${r.text}`).join("\n---\n");
       if (name2 === "obsidian_get_daily_note") {
         const vp = getVaultPath(args2?.vault_path);
         const dateStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        const dailyFolder = await fs4.stat(path5.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
+        const dailyFolder = await fs4.stat(path6.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
         const fileName = `${dateStr}.md`;
-        const filePath = path5.join(vp, dailyFolder, fileName);
+        const filePath = path6.join(vp, dailyFolder, fileName);
         let content = "";
         try {
           content = await fs4.readFile(filePath, "utf-8");
         } catch (e) {
-          await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+          await fs4.mkdir(path6.dirname(filePath), { recursive: true });
           content = `# ${dateStr}
 
 `;
@@ -60834,7 +60939,7 @@ Content: ${r.text}`).join("\n---\n");
             continue;
           }
           try {
-            const content = await fs4.readFile(path5.join(vp, f), "utf-8");
+            const content = await fs4.readFile(path6.join(vp, f), "utf-8");
             if (content.toLowerCase().includes(query)) matches.push(f);
           } catch (e) {
           }
@@ -60878,7 +60983,7 @@ Content: ${r.text}
           const batch = files.slice(i2, i2 + batchSize);
           await Promise.all(batch.map(async (f) => {
             try {
-              const content = await fs4.readFile(path5.join(vp, f), "utf-8");
+              const content = await fs4.readFile(path6.join(vp, f), "utf-8");
               if (linkRegex.test(content)) {
                 backlinks.push(f);
               }
@@ -60894,27 +60999,21 @@ Content: ${r.text}
       }
       if (name2 === "obsidian_get_links") {
         const vp = getVaultPath(args2?.vault_path);
-        const filePath = path5.join(vp, String(args2?.file_path));
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
         const content = await fs4.readFile(filePath, "utf-8");
-        const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
-        const links = [];
-        let match2;
-        while ((match2 = regex.exec(content)) !== null) {
-          links.push(match2[1]);
-        }
-        return { content: [{ type: "text", text: JSON.stringify([...new Set(links)], null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify(extractWikilinks(content), null, 2) }] };
       }
       if (name2 === "obsidian_move_note") {
         const vp = getVaultPath(args2?.vault_path);
-        const source = path5.join(vp, String(args2?.source_path));
-        const dest = path5.join(vp, String(args2?.dest_path));
-        await fs4.mkdir(path5.dirname(dest), { recursive: true });
+        const source = getSafeFilePath(vp, String(args2?.source_path));
+        const dest = getSafeFilePath(vp, String(args2?.dest_path));
+        await fs4.mkdir(path6.dirname(dest), { recursive: true });
         await fs4.rename(source, dest);
         return { content: [{ type: "text", text: `Moved ${args2?.source_path} to ${args2?.dest_path}` }] };
       }
       if (name2 === "obsidian_update_frontmatter") {
         const vp = getVaultPath(args2?.vault_path);
-        const filePath = path5.join(vp, String(args2?.file_path));
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
         const key = String(args2?.key);
         let value = args2?.value;
         try {
@@ -60928,33 +61027,51 @@ Content: ${r.text}
         await fs4.writeFile(filePath, updatedContent, "utf-8");
         return { content: [{ type: "text", text: `Updated frontmatter "${key}" in ${args2?.file_path}` }] };
       }
+      if (name2 === "obsidian_replace_section") {
+        const vp = getVaultPath(args2?.vault_path);
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
+        const heading = String(args2?.heading);
+        const content = String(args2?.content);
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const range3 = findSectionRange(fileContent, heading);
+        if (!range3) throw new McpError(ErrorCode.InvalidParams, `Heading "${heading}" not found in ${args2?.file_path}`);
+        await fs4.writeFile(filePath, replaceSection(fileContent, range3, content), "utf-8");
+        return { content: [{ type: "text", text: `Replaced section "${heading}" in ${args2?.file_path}` }] };
+      }
+      if (name2 === "obsidian_insert_at_heading") {
+        const vp = getVaultPath(args2?.vault_path);
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
+        const heading = String(args2?.heading);
+        const content = String(args2?.content);
+        const position = args2?.position || "end";
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const range3 = findSectionRange(fileContent, heading);
+        await fs4.writeFile(filePath, insertAtHeading(fileContent, heading, content, position, range3), "utf-8");
+        return { content: [{ type: "text", text: `Inserted content under "${heading}" in ${args2?.file_path}` }] };
+      }
       if (name2 === "obsidian_append_daily_log") {
         const vp = getVaultPath(args2?.vault_path);
         const heading = String(args2?.heading);
         const content = String(args2?.content);
         const dateStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        const dailyFolder = await fs4.stat(path5.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
+        const dailyFolder = await fs4.stat(path6.join(vp, "Daily Notes")).catch(() => null) ? "Daily Notes" : "";
         const fileName = `${dateStr}.md`;
-        const filePath = path5.join(vp, dailyFolder, fileName);
+        const filePath = path6.join(vp, dailyFolder, fileName);
         let fileContent = "";
         try {
           fileContent = await fs4.readFile(filePath, "utf-8");
         } catch (e) {
-          await fs4.mkdir(path5.dirname(filePath), { recursive: true });
+          await fs4.mkdir(path6.dirname(filePath), { recursive: true });
           fileContent = `# ${dateStr}
 
 `;
         }
-        const headingRegex = new RegExp(`^#+\\s+${heading}\\s*$`, "m");
         const timestamp = (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         const entry = `
 - [${timestamp}] ${content}`;
-        if (headingRegex.test(fileContent)) {
-          const match2 = headingRegex.exec(fileContent);
-          if (match2) {
-            const headingIndex = match2.index + match2[0].length;
-            fileContent = fileContent.slice(0, headingIndex) + entry + fileContent.slice(headingIndex);
-          }
+        const range3 = findSectionRange(fileContent, heading);
+        if (range3) {
+          fileContent = fileContent.slice(0, range3.headingEnd) + entry + fileContent.slice(range3.headingEnd);
         } else {
           fileContent += `
 
