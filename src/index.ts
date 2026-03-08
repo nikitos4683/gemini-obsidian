@@ -36,6 +36,7 @@ import * as os from 'os';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 import { VaultIndexer } from './rag/store.js';
+import { extractWikilinks, findSectionRange, replaceSection, insertAtHeading, getSafeFilePath } from './utils.js';
 
 let VAULT_PATH: string | null = process.env.OBSIDIAN_VAULT_PATH || null;
 const indexer = new VaultIndexer();
@@ -98,7 +99,7 @@ async function readStdin(): Promise<string> {
   const args = process.argv.slice(2);
   
   // If arguments start with a tool name (simple heuristic)
-  const knownTools = ['obsidian_list_notes', 'obsidian_read_note', 'obsidian_search_notes', 'obsidian_rag_index', 'obsidian_rag_query', 'obsidian_set_vault', 'obsidian_create_note', 'obsidian_append_note', 'obsidian_get_daily_note', 'obsidian_get_backlinks', 'obsidian_get_links', 'obsidian_move_note', 'obsidian_update_frontmatter', 'obsidian_append_daily_log'];
+  const knownTools = ['obsidian_list_notes', 'obsidian_read_note', 'obsidian_search_notes', 'obsidian_rag_index', 'obsidian_rag_query', 'obsidian_set_vault', 'obsidian_create_note', 'obsidian_append_note', 'obsidian_get_daily_note', 'obsidian_get_backlinks', 'obsidian_get_links', 'obsidian_move_note', 'obsidian_update_frontmatter', 'obsidian_append_daily_log', 'obsidian_replace_section', 'obsidian_insert_at_heading'];
   
   if (args.length > 0 && knownTools.includes(args[0])) {
     const toolName = args[0];
@@ -127,18 +128,18 @@ async function readStdin(): Promise<string> {
             result = JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `\n...and ${files.length - 100} more.` : '');
         } else if (toolName === 'obsidian_read_note') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const filePath = path.join(vp, String(parsedArgs.file_path));
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
             result = await fs.readFile(filePath, 'utf-8');
         } else if (toolName === 'obsidian_create_note') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const filePath = path.join(vp, String(parsedArgs.file_path));
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
             const content = String(parsedArgs.content || '');
             await fs.mkdir(path.dirname(filePath), { recursive: true });
             await fs.writeFile(filePath, content, 'utf-8');
             result = `Created note: ${parsedArgs.file_path}`;
         } else if (toolName === 'obsidian_append_note') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const filePath = path.join(vp, String(parsedArgs.file_path));
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
             const content = String(parsedArgs.content || '');
             await fs.appendFile(filePath, '\n' + content, 'utf-8');
             result = `Appended to note: ${parsedArgs.file_path}`;
@@ -227,25 +228,19 @@ async function readStdin(): Promise<string> {
             }
         } else if (toolName === 'obsidian_get_links') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const filePath = path.join(vp, String(parsedArgs.file_path));
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
             const content = await fs.readFile(filePath, 'utf-8');
-            const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
-            const links: string[] = [];
-            let match;
-            while ((match = regex.exec(content)) !== null) {
-                links.push(match[1]);
-            }
-            result = JSON.stringify([...new Set(links)], null, 2);
+            result = JSON.stringify(extractWikilinks(content), null, 2);
         } else if (toolName === 'obsidian_move_note') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const source = path.join(vp, String(parsedArgs.source_path));
-            const dest = path.join(vp, String(parsedArgs.dest_path));
+            const source = getSafeFilePath(vp, String(parsedArgs.source_path));
+            const dest = getSafeFilePath(vp, String(parsedArgs.dest_path));
             await fs.mkdir(path.dirname(dest), { recursive: true });
             await fs.rename(source, dest);
             result = `Moved ${parsedArgs.source_path} to ${parsedArgs.dest_path}`;
         } else if (toolName === 'obsidian_update_frontmatter') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const filePath = path.join(vp, String(parsedArgs.file_path));
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
             const key = String(parsedArgs.key);
             let value: any = parsedArgs.value;
             try { value = JSON.parse(String(parsedArgs.value)); } catch (e) {}
@@ -255,6 +250,26 @@ async function readStdin(): Promise<string> {
             const updatedContent = matter.stringify(parsed.content, parsed.data);
             await fs.writeFile(filePath, updatedContent, 'utf-8');
             result = `Updated frontmatter "${key}" in ${parsedArgs.file_path}`;
+        } else if (toolName === 'obsidian_replace_section') {
+            const vp = getVaultPath(parsedArgs.vault_path);
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+            const heading = String(parsedArgs.heading);
+            const content = String(parsedArgs.content);
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const range = findSectionRange(fileContent, heading);
+            if (!range) throw new Error(`Heading "${heading}" not found in ${parsedArgs.file_path}`);
+            await fs.writeFile(filePath, replaceSection(fileContent, range, content), 'utf-8');
+            result = `Replaced section "${heading}" in ${parsedArgs.file_path}`;
+        } else if (toolName === 'obsidian_insert_at_heading') {
+            const vp = getVaultPath(parsedArgs.vault_path);
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+            const heading = String(parsedArgs.heading);
+            const content = String(parsedArgs.content);
+            const position = (parsedArgs.position || 'end') as 'beginning' | 'end';
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const range = findSectionRange(fileContent, heading);
+            await fs.writeFile(filePath, insertAtHeading(fileContent, heading, content, position, range), 'utf-8');
+            result = `Inserted content under "${heading}" in ${parsedArgs.file_path}`;
         } else if (toolName === 'obsidian_append_daily_log') {
             const vp = getVaultPath(parsedArgs.vault_path);
             const heading = String(parsedArgs.heading);
@@ -268,15 +283,11 @@ async function readStdin(): Promise<string> {
                 await fs.mkdir(path.dirname(filePath), { recursive: true });
                 fileContent = `# ${dateStr}\n\n`;
             }
-            const headingRegex = new RegExp(`^#+\\s+${heading}\\s*$`, 'm');
             const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const entry = `\n- [${timestamp}] ${content}`;
-            if (headingRegex.test(fileContent)) {
-                const match = headingRegex.exec(fileContent);
-                if (match) {
-                    const headingIndex = match.index + match[0].length;
-                    fileContent = fileContent.slice(0, headingIndex) + entry + fileContent.slice(headingIndex);
-                }
+            const range = findSectionRange(fileContent, heading);
+            if (range) {
+                fileContent = fileContent.slice(0, range.headingEnd) + entry + fileContent.slice(range.headingEnd);
             } else {
                 fileContent += `\n\n## ${heading}${entry}`;
             }
@@ -480,6 +491,35 @@ async function readStdin(): Promise<string> {
             required: ['heading', 'content'],
           },
         },
+        {
+          name: 'obsidian_replace_section',
+          description: 'Replace the body under a heading (up to the next heading of equal/higher level, or EOF). The heading line itself is preserved.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              file_path: { type: 'string', description: 'Relative path to the note' },
+              heading: { type: 'string', description: 'Heading text to find (e.g. "Status")' },
+              content: { type: 'string', description: 'New section body (replaces everything between heading and next same/higher-level heading)' },
+              vault_path: { type: 'string', description: 'Optional vault path override' },
+            },
+            required: ['file_path', 'heading', 'content'],
+          },
+        },
+        {
+          name: 'obsidian_insert_at_heading',
+          description: 'Insert content under a specific heading. If heading not found, appends it as a new ## section.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              file_path: { type: 'string', description: 'Relative path to the note' },
+              heading: { type: 'string', description: 'Heading text to find (e.g. "Notes")' },
+              content: { type: 'string', description: 'Text to insert' },
+              position: { type: 'string', enum: ['beginning', 'end'], description: 'Insert at beginning or end of section (default: end)' },
+              vault_path: { type: 'string', description: 'Optional vault path override' },
+            },
+            required: ['file_path', 'heading', 'content'],
+          },
+        },
       ],
     };
   });
@@ -501,13 +541,13 @@ async function readStdin(): Promise<string> {
       }
       if (name === 'obsidian_read_note') {
           const vp = getVaultPath(args?.vault_path as string);
-          const filePath = path.join(vp, String(args?.file_path));
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
           const content = await fs.readFile(filePath, 'utf-8');
           return { content: [{ type: 'text', text: content }] };
       }
       if (name === 'obsidian_create_note') {
           const vp = getVaultPath(args?.vault_path as string);
-          const filePath = path.join(vp, String(args?.file_path));
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
           const content = String(args?.content || '');
           await fs.mkdir(path.dirname(filePath), { recursive: true });
           await fs.writeFile(filePath, content, 'utf-8');
@@ -515,7 +555,7 @@ async function readStdin(): Promise<string> {
       }
       if (name === 'obsidian_append_note') {
           const vp = getVaultPath(args?.vault_path as string);
-          const filePath = path.join(vp, String(args?.file_path));
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
           const content = String(args?.content || '');
           await fs.appendFile(filePath, '\n' + content, 'utf-8');
           return { content: [{ type: 'text', text: `Appended to note: ${args?.file_path}` }] };
@@ -604,22 +644,14 @@ async function readStdin(): Promise<string> {
       }
       if (name === 'obsidian_get_links') {
           const vp = getVaultPath(args?.vault_path as string);
-          const filePath = path.join(vp, String(args?.file_path));
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
           const content = await fs.readFile(filePath, 'utf-8');
-          
-          const regex = /\[\[(.*?)(?:\|.*?)?\]\]/g;
-          const links: string[] = [];
-          let match;
-          while ((match = regex.exec(content)) !== null) {
-              links.push(match[1]);
-          }
-          
-          return { content: [{ type: 'text', text: JSON.stringify([...new Set(links)], null, 2) }] };
+          return { content: [{ type: 'text', text: JSON.stringify(extractWikilinks(content), null, 2) }] };
       }
       if (name === 'obsidian_move_note') {
           const vp = getVaultPath(args?.vault_path as string);
-          const source = path.join(vp, String(args?.source_path));
-          const dest = path.join(vp, String(args?.dest_path));
+          const source = getSafeFilePath(vp, String(args?.source_path));
+          const dest = getSafeFilePath(vp, String(args?.dest_path));
           
           await fs.mkdir(path.dirname(dest), { recursive: true });
           await fs.rename(source, dest);
@@ -627,7 +659,7 @@ async function readStdin(): Promise<string> {
       }
       if (name === 'obsidian_update_frontmatter') {
           const vp = getVaultPath(args?.vault_path as string);
-          const filePath = path.join(vp, String(args?.file_path));
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
           const key = String(args?.key);
           let value: any = args?.value;
           
@@ -646,16 +678,38 @@ async function readStdin(): Promise<string> {
           
           return { content: [{ type: 'text', text: `Updated frontmatter "${key}" in ${args?.file_path}` }] };
       }
+      if (name === 'obsidian_replace_section') {
+          const vp = getVaultPath(args?.vault_path as string);
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
+          const heading = String(args?.heading);
+          const content = String(args?.content);
+          const fileContent = await fs.readFile(filePath, 'utf-8');
+          const range = findSectionRange(fileContent, heading);
+          if (!range) throw new McpError(ErrorCode.InvalidParams, `Heading "${heading}" not found in ${args?.file_path}`);
+          await fs.writeFile(filePath, replaceSection(fileContent, range, content), 'utf-8');
+          return { content: [{ type: 'text', text: `Replaced section "${heading}" in ${args?.file_path}` }] };
+      }
+      if (name === 'obsidian_insert_at_heading') {
+          const vp = getVaultPath(args?.vault_path as string);
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
+          const heading = String(args?.heading);
+          const content = String(args?.content);
+          const position = (args?.position || 'end') as 'beginning' | 'end';
+          const fileContent = await fs.readFile(filePath, 'utf-8');
+          const range = findSectionRange(fileContent, heading);
+          await fs.writeFile(filePath, insertAtHeading(fileContent, heading, content, position, range), 'utf-8');
+          return { content: [{ type: 'text', text: `Inserted content under "${heading}" in ${args?.file_path}` }] };
+      }
       if (name === 'obsidian_append_daily_log') {
           const vp = getVaultPath(args?.vault_path as string);
           const heading = String(args?.heading);
           const content = String(args?.content);
-          
+
           const dateStr = new Date().toISOString().split('T')[0];
           const dailyFolder = (await fs.stat(path.join(vp, 'Daily Notes')).catch(() => null)) ? 'Daily Notes' : '';
           const fileName = `${dateStr}.md`;
           const filePath = path.join(vp, dailyFolder, fileName);
-          
+
           let fileContent = '';
           try {
               fileContent = await fs.readFile(filePath, 'utf-8');
@@ -664,24 +718,16 @@ async function readStdin(): Promise<string> {
               fileContent = `# ${dateStr}\n\n`;
           }
 
-          const headingRegex = new RegExp(`^#+\\s+${heading}\\s*$`, 'm');
           const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const entry = `\n- [${timestamp}] ${content}`;
+          const range = findSectionRange(fileContent, heading);
 
-          if (headingRegex.test(fileContent)) {
-              // Append after the heading
-              // We find the index of the heading, then look for the next heading or end of file
-              const match = headingRegex.exec(fileContent);
-              if (match) {
-                  const headingIndex = match.index + match[0].length;
-                  // Insert immediately after the heading
-                  fileContent = fileContent.slice(0, headingIndex) + entry + fileContent.slice(headingIndex);
-              }
+          if (range) {
+              fileContent = fileContent.slice(0, range.headingEnd) + entry + fileContent.slice(range.headingEnd);
           } else {
-              // Append heading and content to the end
               fileContent += `\n\n## ${heading}${entry}`;
           }
-          
+
           await fs.writeFile(filePath, fileContent, 'utf-8');
           return { content: [{ type: 'text', text: `Appended to daily note under "${heading}"` }] };
       }

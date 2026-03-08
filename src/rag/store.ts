@@ -6,6 +6,18 @@ import { glob } from 'glob';
 import matter from 'gray-matter';
 import md5 from 'md5';
 import { Embedder } from './embedder.js';
+import { buildEmbeddingInputs, ChunkingOptions } from './chunking.js';
+import { getSafeFilePath } from '../utils.js';
+
+function chunkingOptionsFromEnv(): ChunkingOptions {
+  const minRaw = Number(process.env.GEMINI_OBSIDIAN_MIN_CHUNK_CHARS ?? '40');
+  const maxRaw = Number(process.env.GEMINI_OBSIDIAN_MAX_CHUNK_CHARS ?? '1800');
+  const targetRaw = Number(process.env.GEMINI_OBSIDIAN_TARGET_CHUNK_CHARS ?? '700');
+  const min = Number.isFinite(minRaw) && minRaw > 0 ? Math.floor(minRaw) : 40;
+  const max = Number.isFinite(maxRaw) && maxRaw > 0 ? Math.floor(maxRaw) : 1800;
+  const target = Number.isFinite(targetRaw) && targetRaw > min ? Math.floor(targetRaw) : 700;
+  return { minChunkChars: min, maxChunkChars: max, targetChunkChars: target };
+}
 
 const DB_PATH = path.join(os.homedir(), '.gemini-obsidian-lancedb');
 const HASH_PATH = path.join(os.homedir(), '.gemini-obsidian-file-hashes.json');
@@ -91,114 +103,15 @@ export class VaultIndexer {
     return recovered;
   }
 
-  private splitTextForEmbedding(text: string, maxChars: number = 1800): string[] {
-    const normalized = text.trim().replace(/\s+/g, ' ');
-    if (normalized.length <= maxChars) return [normalized];
-
-    const segments: string[] = [];
-    const sentenceParts = normalized.split(/(?<=[.!?])\s+/);
-    let current = '';
-
-    for (const part of sentenceParts) {
-      if (part.length > maxChars) {
-        if (current.length > 0) {
-          segments.push(current);
-          current = '';
-        }
-        for (let i = 0; i < part.length; i += maxChars) {
-          segments.push(part.slice(i, i + maxChars));
-        }
-        continue;
-      }
-
-      const candidate = current.length > 0 ? `${current} ${part}` : part;
-      if (candidate.length <= maxChars) {
-        current = candidate;
-      } else {
-        if (current.length > 0) segments.push(current);
-        current = part;
-      }
-    }
-
-    if (current.length > 0) segments.push(current);
-    return segments;
-  }
-
-  private mergeSegmentsForEmbedding(segments: string[], targetChars: number): string[] {
-    if (segments.length === 0) return [];
-    const merged: string[] = [];
-    let current = '';
-
-    for (const segment of segments) {
-      if (segment.length >= targetChars) {
-        if (current.length > 0) {
-          merged.push(current);
-          current = '';
-        }
-        merged.push(segment);
-        continue;
-      }
-
-      const candidate = current.length > 0 ? `${current}\n\n${segment}` : segment;
-      if (candidate.length <= targetChars) {
-        current = candidate;
-      } else {
-        if (current.length > 0) merged.push(current);
-        current = segment;
-      }
-    }
-
-    if (current.length > 0) merged.push(current);
-    return merged;
-  }
-
-  private buildEmbeddingInputs(relativePath: string, body: string) {
-    const minChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MIN_CHUNK_CHARS ?? '40');
-    const minChunkChars = Number.isFinite(minChunkCharsRaw) && minChunkCharsRaw > 0 ? Math.floor(minChunkCharsRaw) : 40;
-    const maxChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_MAX_CHUNK_CHARS ?? '1800');
-    const maxChunkChars = Number.isFinite(maxChunkCharsRaw) && maxChunkCharsRaw > 0 ? Math.floor(maxChunkCharsRaw) : 1800;
-    const targetChunkCharsRaw = Number(process.env.GEMINI_OBSIDIAN_TARGET_CHUNK_CHARS ?? '700');
-    const targetChunkChars = Number.isFinite(targetChunkCharsRaw) && targetChunkCharsRaw > minChunkChars
-      ? Math.floor(targetChunkCharsRaw)
-      : 700;
-
-    const paragraphs = body.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    const rawSegments: string[] = [];
-    const chunkMetadata: { id: string; text: string; path: string }[] = [];
-
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraph = paragraphs[i].trim();
-      if (paragraph.length < minChunkChars) continue;
-
-      const segments = this.splitTextForEmbedding(paragraph, maxChunkChars);
-      for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
-        const segment = segments[segmentIndex];
-        if (segment.length < minChunkChars) continue;
-        rawSegments.push(segment);
-      }
-    }
-
-    const textsToEmbed = this.mergeSegmentsForEmbedding(rawSegments, targetChunkChars);
-    for (let chunkIndex = 0; chunkIndex < textsToEmbed.length; chunkIndex++) {
-      chunkMetadata.push({
-        id: md5(`${relativePath}-${chunkIndex}`),
-        path: relativePath,
-        text: textsToEmbed[chunkIndex]
-      });
-    }
-
-    return { textsToEmbed, chunkMetadata };
-  }
-
   public async indexFile(vaultPath: string, relativePath: string) {
     const embedder = Embedder.getInstance();
-    const filePath = path.join(vaultPath, relativePath);
+    const filePath = getSafeFilePath(vaultPath, relativePath);
 
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       const { data, content: body } = matter(content);
 
-      const { textsToEmbed, chunkMetadata } = this.buildEmbeddingInputs(relativePath, body);
+      const { textsToEmbed, chunkMetadata } = buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
 
       if (textsToEmbed.length > 0) {
           const chunks = await this.embedWithFallback(embedder, textsToEmbed, chunkMetadata);
@@ -297,7 +210,7 @@ export class VaultIndexer {
 
             changedPaths.push(relativePath);
             const { content: body } = matter(content);
-            return this.buildEmbeddingInputs(relativePath, body);
+            return buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
           } catch (err) {
             console.error(`Failed to process file ${filePath}:`, err);
             return null;
