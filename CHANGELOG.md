@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-03-12
+
+### Features
+- feat: follow symlinks to support indexing external files
+
+### Build & Maintenance
+- build(deps): update mcp-related dependencies and rebuild dist
+- chore(deps): bump ajv, express-rate-limit, ip-address, qs, minimatch, and hono
+- chore: synchronize distribution bundle with version bump
+
 ## [1.4.0] - 2026-03-08
 
 ### Features
