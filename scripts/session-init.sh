@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG_FILE="$HOME/.gemini-obsidian.config.json"
+VAULT_PATH="${OBSIDIAN_VAULT_PATH:-}"
+
+if [ -z "$VAULT_PATH" ] && [ -f "$CONFIG_FILE" ]; then
+  VAULT_PATH=$(node -e "const fs=require('fs'); try { const v=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).vault_path || ''; process.stdout.write(v); } catch { process.stdout.write(''); }" "$CONFIG_FILE")
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+
+message=""
+if [ -n "$VAULT_PATH" ] && [ -d "$VAULT_PATH" ]; then
+  note_count=$(find "$VAULT_PATH" -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' ')
+  status_line="Obsidian vault connected: $VAULT_PATH ($note_count notes)"
+
+  if index_output=$(node "$PLUGIN_ROOT/dist/index.js" obsidian_rag_index 2>/dev/null); then
+    if printf '%s' "$index_output" | grep -q '"chunks":0'; then
+      index_line="RAG index up to date"
+    elif printf '%s' "$index_output" | grep -q '"chunks"'; then
+      chunks=$(printf '%s' "$index_output" | grep -o '"chunks":[0-9]*' | head -n 1 | grep -o '[0-9]*')
+      index_line="RAG index updated: $chunks chunks indexed"
+    else
+      index_line="RAG index check completed"
+    fi
+  else
+    index_line="RAG index refresh failed"
+  fi
+
+  message="$status_line"$'\n'"$index_line"
+else
+  message="Obsidian vault not configured. Use obsidian_set_vault to set your vault path."
+fi
+
+escaped_message=$(printf '%s' "$message" | node -e "let data=''; process.stdin.on('data', c => data += c); process.stdin.on('end', () => process.stdout.write(JSON.stringify(data)));")
+printf '{"systemMessage":%s,"suppressOutput":true}\n' "$escaped_message"
