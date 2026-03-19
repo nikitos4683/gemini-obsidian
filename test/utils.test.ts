@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
-import { extractWikilinks, findSectionRange, replaceSection, insertAtHeading, getSafeFilePath } from '../src/utils';
+import matter from 'gray-matter';
+import {
+  extractWikilinks,
+  findSectionRange,
+  replaceSection,
+  insertAtHeading,
+  getSafeFilePath,
+  listNotesPattern,
+  replaceInNote,
+  stripHeadingFromLink,
+  applyFrontmatterUpdate,
+} from '../src/utils';
 
 describe('extractWikilinks', () => {
   it('extracts simple wikilinks', () => {
@@ -137,5 +148,65 @@ describe('getSafeFilePath', () => {
     const inside = path.join(vault, 'notes', 'file.md');
     const result = getSafeFilePath(vault, inside);
     expect(result).toBe(inside);
+  });
+});
+
+describe('listNotesPattern', () => {
+  it('uses full-vault recursion by default', () => {
+    expect(listNotesPattern()).toBe('**/*.md');
+  });
+
+  it('uses recursive subfolder glob when subfolder is provided', () => {
+    expect(listNotesPattern('projects/app')).toBe(path.join('projects/app', '**', '*.md'));
+  });
+});
+
+describe('replaceInNote', () => {
+  it('replaces only the first matching occurrence', () => {
+    const result = replaceInNote('alpha beta alpha', 'alpha', 'gamma');
+    expect(result).toBe('gamma beta alpha');
+  });
+
+  it('throws when target text is missing', () => {
+    expect(() => replaceInNote('alpha beta', 'delta', 'gamma')).toThrow('Text not found');
+  });
+});
+
+describe('stripHeadingFromLink', () => {
+  it('removes heading fragments', () => {
+    expect(stripHeadingFromLink('Note#Section')).toBe('Note');
+  });
+
+  it('returns unchanged link when no heading fragment exists', () => {
+    expect(stripHeadingFromLink('Note')).toBe('Note');
+  });
+});
+
+describe('applyFrontmatterUpdate', () => {
+  it('applies a single parsed JSON value', () => {
+    const updated = applyFrontmatterUpdate('---\ntags: []\n---\nBody\n', { key: 'done', value: 'true' });
+    const parsed = matter(updated);
+    expect(parsed.data.done).toBe(true);
+    expect(parsed.data.tags).toEqual([]);
+  });
+
+  it('applies batch updates', () => {
+    const updated = applyFrontmatterUpdate('---\nstatus: todo\n---\nBody\n', {
+      updates: { status: 'done', priority: 2 },
+    });
+    const parsed = matter(updated);
+    expect(parsed.data.status).toBe('done');
+    expect(parsed.data.priority).toBe(2);
+  });
+
+  it('ignores prototype pollution keys during batch updates', () => {
+    const updated = applyFrontmatterUpdate('---\nstatus: todo\n---\nBody\n', {
+      updates: { ['__proto__']: { polluted: true }, constructor: 'bad', prototype: 'bad', status: 'done' },
+    });
+    const parsed = matter(updated);
+    expect(parsed.data.status).toBe('done');
+    expect(Object.prototype).not.toHaveProperty('polluted');
+    expect(parsed.data).not.toHaveProperty('constructor');
+    expect(parsed.data).not.toHaveProperty('prototype');
   });
 });

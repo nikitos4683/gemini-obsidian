@@ -36,7 +36,17 @@ import * as os from 'os';
 import { glob } from 'glob';
 import matter from 'gray-matter';
 import { VaultIndexer } from './rag/store.js';
-import { extractWikilinks, findSectionRange, replaceSection, insertAtHeading, getSafeFilePath } from './utils.js';
+import {
+  extractWikilinks,
+  findSectionRange,
+  replaceSection,
+  insertAtHeading,
+  getSafeFilePath,
+  listNotesPattern,
+  replaceInNote,
+  applyFrontmatterUpdate,
+  stripHeadingFromLink,
+} from './utils.js';
 
 let VAULT_PATH: string | null = process.env.OBSIDIAN_VAULT_PATH || null;
 const indexer = new VaultIndexer();
@@ -99,7 +109,7 @@ async function readStdin(): Promise<string> {
   const args = process.argv.slice(2);
   
   // If arguments start with a tool name (simple heuristic)
-  const knownTools = ['obsidian_list_notes', 'obsidian_read_note', 'obsidian_search_notes', 'obsidian_rag_index', 'obsidian_rag_query', 'obsidian_set_vault', 'obsidian_create_note', 'obsidian_append_note', 'obsidian_get_daily_note', 'obsidian_get_backlinks', 'obsidian_get_links', 'obsidian_move_note', 'obsidian_update_frontmatter', 'obsidian_append_daily_log', 'obsidian_replace_section', 'obsidian_insert_at_heading'];
+  const knownTools = ['obsidian_list_notes', 'obsidian_read_note', 'obsidian_search_notes', 'obsidian_rag_index', 'obsidian_rag_query', 'obsidian_set_vault', 'obsidian_create_note', 'obsidian_append_note', 'obsidian_get_daily_note', 'obsidian_get_backlinks', 'obsidian_get_links', 'obsidian_move_note', 'obsidian_update_frontmatter', 'obsidian_append_daily_log', 'obsidian_replace_section', 'obsidian_insert_at_heading', 'obsidian_replace_in_note', 'obsidian_get_broken_links', 'validate_frontmatter'];
   
   if (args.length > 0 && knownTools.includes(args[0])) {
     const toolName = args[0];
@@ -122,8 +132,7 @@ async function readStdin(): Promise<string> {
         let result;
         if (toolName === 'obsidian_list_notes') {
             const vp = getVaultPath(parsedArgs.vault_path);
-            const sub = parsedArgs.subfolder ? String(parsedArgs.subfolder) : '**';
-            const pattern = path.join(sub, '*.md');
+            const pattern = listNotesPattern(parsedArgs.subfolder ? String(parsedArgs.subfolder) : undefined);
             const files = await glob(pattern, { cwd: vp, follow: true });
             result = JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `\n...and ${files.length - 100} more.` : '');
         } else if (toolName === 'obsidian_read_note') {
@@ -178,11 +187,14 @@ async function readStdin(): Promise<string> {
             if (parsedArgs.hook) {
                 const inputStr = await readStdin();
                 if (!inputStr) {
-                    process.exit(1);
+                    process.exit(0);
                 }
                 const input = JSON.parse(inputStr);
                 vp = getVaultPath(input.tool_input?.vault_path || VAULT_PATH);
                 fp = input.tool_input?.file_path;
+                if (!fp) {
+                    process.exit(0);
+                }
             } else {
                 vp = getVaultPath(parsedArgs.vault_path);
                 fp = parsedArgs.file_path ? String(parsedArgs.file_path) : null;
@@ -241,15 +253,18 @@ async function readStdin(): Promise<string> {
         } else if (toolName === 'obsidian_update_frontmatter') {
             const vp = getVaultPath(parsedArgs.vault_path);
             const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
-            const key = String(parsedArgs.key);
-            let value: any = parsedArgs.value;
-            try { value = JSON.parse(String(parsedArgs.value)); } catch (e) {}
             const fileContent = await fs.readFile(filePath, 'utf-8');
-            const parsed = matter(fileContent);
-            parsed.data[key] = value;
-            const updatedContent = matter.stringify(parsed.content, parsed.data);
-            await fs.writeFile(filePath, updatedContent, 'utf-8');
-            result = `Updated frontmatter "${key}" in ${parsedArgs.file_path}`;
+            let updateArg: Parameters<typeof applyFrontmatterUpdate>[1];
+            if (parsedArgs.updates) {
+                const updates = typeof parsedArgs.updates === 'string'
+                    ? JSON.parse(parsedArgs.updates)
+                    : parsedArgs.updates;
+                updateArg = { updates };
+            } else {
+                updateArg = { key: String(parsedArgs.key), value: String(parsedArgs.value) };
+            }
+            await fs.writeFile(filePath, applyFrontmatterUpdate(fileContent, updateArg), 'utf-8');
+            result = `Updated frontmatter in ${parsedArgs.file_path}`;
         } else if (toolName === 'obsidian_replace_section') {
             const vp = getVaultPath(parsedArgs.vault_path);
             const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
@@ -293,6 +308,99 @@ async function readStdin(): Promise<string> {
             }
             await fs.writeFile(filePath, fileContent, 'utf-8');
             result = `Appended to daily note under "${heading}"`;
+        } else if (toolName === 'obsidian_replace_in_note') {
+            const vp = getVaultPath(parsedArgs.vault_path);
+            const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const updated = replaceInNote(fileContent, String(parsedArgs.old_text), String(parsedArgs.new_text ?? ''));
+            await fs.writeFile(filePath, updated, 'utf-8');
+            result = `Replaced text in ${parsedArgs.file_path}`;
+        } else if (toolName === 'obsidian_get_broken_links') {
+            const vp = getVaultPath(parsedArgs.vault_path);
+            const pattern = listNotesPattern(parsedArgs.subfolder ? String(parsedArgs.subfolder) : undefined);
+            const files = await glob(pattern, { cwd: vp, follow: true });
+            const allFiles = await glob('**/*.md', { cwd: vp, follow: true });
+            const nameSet = new Set(allFiles.map((f: string) => path.basename(f, '.md').toLowerCase()));
+            const targetMap = new Map<string, string[]>();
+            for (const f of files) {
+                const content = await fs.readFile(path.join(vp, f), 'utf-8').catch(() => '');
+                for (const link of extractWikilinks(content)) {
+                    const target = stripHeadingFromLink(link);
+                    if (!target) continue;
+                    const refs = targetMap.get(target) ?? [];
+                    refs.push(f);
+                    targetMap.set(target, refs);
+                }
+            }
+            const broken: Array<{ target: string; refs: string[] }> = [];
+            for (const [target, refs] of targetMap) {
+                if (!nameSet.has(target.toLowerCase())) {
+                    broken.push({ target, refs });
+                }
+            }
+            result = broken.length === 0
+                ? 'No broken links found.'
+                : `Found ${broken.length} broken link(s):\n${broken.map((entry) => `[[${entry.target}]] — in: ${entry.refs.join(', ')}`).join('\n')}`;
+        } else if (toolName === 'validate_frontmatter') {
+            if (!parsedArgs.hook) {
+                process.exit(0);
+            }
+            const inputStr = await readStdin();
+            if (!inputStr) {
+                process.exit(0);
+            }
+            let input: any;
+            try {
+                input = JSON.parse(inputStr);
+            } catch {
+                process.exit(0);
+            }
+
+            const filePath = String(input.tool_input?.file_path ?? '');
+            const content = String(input.tool_input?.content ?? '');
+            if (!filePath || !content) {
+                process.exit(0);
+            }
+
+            let vp: string;
+            try {
+                vp = getVaultPath(input.tool_input?.vault_path || undefined);
+            } catch {
+                process.exit(0);
+            }
+
+            const schemaPaths = [
+                path.join(vp, '.gemini-obsidian-schema.json'),
+                path.join(vp, '.obsidian-rag-schema.json'),
+            ];
+
+            let schema: { rules: Array<{ prefix: string; required: string[] }> } | undefined;
+            for (const schemaPath of schemaPaths) {
+                try {
+                    schema = JSON.parse(await fs.readFile(schemaPath, 'utf-8'));
+                    break;
+                } catch {
+                    // Try the next schema path.
+                }
+            }
+            if (!schema) {
+                process.exit(0);
+            }
+
+            const matchingRule = (schema.rules ?? []).find((rule) => filePath.startsWith(rule.prefix));
+            if (!matchingRule) {
+                process.exit(0);
+            }
+
+            const parsed = matter(content);
+            const missing = matchingRule.required.filter((field) => !(field in parsed.data));
+            if (missing.length > 0) {
+                console.error(
+                    `[gemini-obsidian] Blocked: "${filePath}" is missing required frontmatter fields: ${missing.join(', ')}`
+                );
+                process.exit(2);
+            }
+            process.exit(0);
         } else {
             console.error(`Unknown tool: ${toolName}`);
             process.exit(1);
@@ -466,16 +574,17 @@ async function readStdin(): Promise<string> {
         },
         {
           name: 'obsidian_update_frontmatter',
-          description: 'Update YAML frontmatter of a note safely.',
+          description: 'Update YAML frontmatter of a note safely. Supports single key/value or batch updates.',
           inputSchema: {
             type: 'object',
             properties: {
               file_path: { type: 'string', description: 'Relative path to the note' },
-              key: { type: 'string', description: 'Frontmatter key to update (e.g., "status", "tags")' },
-              value: { type: 'string', description: 'New value for the key (JSON stringified if array/object)' },
+              key: { type: 'string', description: 'Frontmatter key to update (single-key mode)' },
+              value: { type: 'string', description: 'New value for the key (JSON stringified if array/object; single-key mode)' },
+              updates: { type: 'object', description: 'JSON object of key/value pairs to set at once (batch mode, alternative to key+value)' },
               vault_path: { type: 'string', description: 'Optional vault path override' },
             },
-            required: ['file_path', 'key', 'value'],
+            required: ['file_path'],
           },
         },
         {
@@ -520,6 +629,31 @@ async function readStdin(): Promise<string> {
             required: ['file_path', 'heading', 'content'],
           },
         },
+        {
+          name: 'obsidian_replace_in_note',
+          description: 'Replace the first occurrence of a specific text string in a note. Use for surgical inline edits, e.g. adding a wikilink to existing text.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              file_path: { type: 'string', description: 'Relative path to the note' },
+              old_text: { type: 'string', description: 'Exact text to find and replace' },
+              new_text: { type: 'string', description: 'Replacement text (default: empty string)' },
+              vault_path: { type: 'string', description: 'Optional vault path override' },
+            },
+            required: ['file_path', 'old_text'],
+          },
+        },
+        {
+          name: 'obsidian_get_broken_links',
+          description: 'Find all wikilinks in the vault (or a subfolder) that point to non-existent notes. Returns broken links grouped by source file.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              subfolder: { type: 'string', description: 'Limit scan to this subfolder (optional; default: entire vault)' },
+              vault_path: { type: 'string', description: 'Optional vault path override' },
+            },
+          },
+        },
       ],
     };
   });
@@ -534,8 +668,7 @@ async function readStdin(): Promise<string> {
       }
       if (name === 'obsidian_list_notes') {
           const vp = getVaultPath(args?.vault_path as string);
-          const sub = args?.subfolder ? String(args.subfolder) : '**';
-          const pattern = path.join(sub, '*.md');
+          const pattern = listNotesPattern(args?.subfolder ? String(args.subfolder) : undefined);
           const files = await glob(pattern, { cwd: vp, follow: true });
           return { content: [{ type: 'text', text: JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `\n...and ${files.length - 100} more.` : '') }] };
       }
@@ -660,23 +793,12 @@ async function readStdin(): Promise<string> {
       if (name === 'obsidian_update_frontmatter') {
           const vp = getVaultPath(args?.vault_path as string);
           const filePath = getSafeFilePath(vp, String(args?.file_path));
-          const key = String(args?.key);
-          let value: any = args?.value;
-          
-          try {
-              value = JSON.parse(String(args?.value));
-          } catch (e) {
-              // use as string if not valid JSON
-          }
-          
           const fileContent = await fs.readFile(filePath, 'utf-8');
-          const parsed = matter(fileContent);
-          parsed.data[key] = value;
-          
-          const updatedContent = matter.stringify(parsed.content, parsed.data);
-          await fs.writeFile(filePath, updatedContent, 'utf-8');
-          
-          return { content: [{ type: 'text', text: `Updated frontmatter "${key}" in ${args?.file_path}` }] };
+          const updateArg = (args?.updates && typeof args.updates === 'object')
+              ? { updates: args.updates as Record<string, unknown> }
+              : { key: String(args?.key), value: String(args?.value) };
+          await fs.writeFile(filePath, applyFrontmatterUpdate(fileContent, updateArg), 'utf-8');
+          return { content: [{ type: 'text', text: `Updated frontmatter in ${args?.file_path}` }] };
       }
       if (name === 'obsidian_replace_section') {
           const vp = getVaultPath(args?.vault_path as string);
@@ -730,6 +852,43 @@ async function readStdin(): Promise<string> {
 
           await fs.writeFile(filePath, fileContent, 'utf-8');
           return { content: [{ type: 'text', text: `Appended to daily note under "${heading}"` }] };
+      }
+      if (name === 'obsidian_replace_in_note') {
+          const vp = getVaultPath(args?.vault_path as string);
+          const filePath = getSafeFilePath(vp, String(args?.file_path));
+          const fileContent = await fs.readFile(filePath, 'utf-8');
+          const updated = replaceInNote(fileContent, String(args?.old_text), String(args?.new_text ?? ''));
+          await fs.writeFile(filePath, updated, 'utf-8');
+          return { content: [{ type: 'text', text: `Replaced text in ${args?.file_path}` }] };
+      }
+      if (name === 'obsidian_get_broken_links') {
+          const vp = getVaultPath(args?.vault_path as string);
+          const pattern = listNotesPattern(args?.subfolder ? String(args.subfolder) : undefined);
+          const files = await glob(pattern, { cwd: vp, follow: true });
+          const allFiles = await glob('**/*.md', { cwd: vp, follow: true });
+          const nameSet = new Set(allFiles.map((f: string) => path.basename(f, '.md').toLowerCase()));
+          const targetMap = new Map<string, string[]>();
+          for (const f of files) {
+              const content = await fs.readFile(path.join(vp, f), 'utf-8').catch(() => '');
+              for (const link of extractWikilinks(content)) {
+                  const target = stripHeadingFromLink(link);
+                  if (!target) continue;
+                  const refs = targetMap.get(target) ?? [];
+                  refs.push(f);
+                  targetMap.set(target, refs);
+              }
+          }
+          const broken: Array<{ target: string; refs: string[] }> = [];
+          for (const [target, refs] of targetMap) {
+              if (!nameSet.has(target.toLowerCase())) {
+                  broken.push({ target, refs });
+              }
+          }
+          if (broken.length === 0) {
+              return { content: [{ type: 'text', text: 'No broken links found.' }] };
+          }
+          const lines = broken.map((entry) => `[[${entry.target}]] — in: ${entry.refs.join(', ')}`).join('\n');
+          return { content: [{ type: 'text', text: `Found ${broken.length} broken link(s):\n${lines}` }] };
       }
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     } catch (error: any) {

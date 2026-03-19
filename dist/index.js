@@ -10071,10 +10071,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter3 = engine.stringify(data, options2).trim();
+      const matter4 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter3 !== "{}") {
-        buf = newline(open) + newline(matter3) + newline(close);
+      if (matter4 !== "{}") {
+        buf = newline(open) + newline(matter4) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -10180,19 +10180,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse5 = require_parse();
     var utils = require_utils2();
-    function matter3(input, options2) {
+    function matter4(input, options2) {
       if (input === "") {
         return { data: {}, content: input, excerpt: "", orig: input };
       }
       let file2 = toFile(input);
-      const cached2 = matter3.cache[file2.content];
+      const cached2 = matter4.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter3.cache[file2.content] = file2;
+        matter4.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -10214,7 +10214,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter3.language(str2, opts);
+      const language = matter4.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -10249,24 +10249,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter3.engines = engines2;
-    matter3.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter3(file2, options2);
+    matter4.engines = engines2;
+    matter4.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter4(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter3.read = function(filepath, options2) {
+    matter4.read = function(filepath, options2) {
       const str2 = fs5.readFileSync(filepath, "utf8");
-      const file2 = matter3(str2, options2);
+      const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter3.test = function(str2, options2) {
+    matter4.test = function(str2, options2) {
       return utils.startsWith(str2, defaults2(options2).delimiters[0]);
     };
-    matter3.language = function(str2, options2) {
+    matter4.language = function(str2, options2) {
       const opts = defaults2(options2);
       const open = opts.delimiters[0];
-      if (matter3.test(str2)) {
+      if (matter4.test(str2)) {
         str2 = str2.slice(open.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -10275,11 +10275,11 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter3.cache = {};
-    matter3.clearCache = function() {
-      matter3.cache = {};
+    matter4.cache = {};
+    matter4.clearCache = function() {
+      matter4.cache = {};
     };
-    module2.exports = matter3;
+    module2.exports = matter4;
   }
 });
 
@@ -44643,14 +44643,14 @@ var glob = Object.assign(glob_, {
 glob.glob = glob;
 
 // src/index.ts
-var import_gray_matter2 = __toESM(require_gray_matter());
+var import_gray_matter3 = __toESM(require_gray_matter());
 
 // src/rag/store.ts
 var lancedb = __toESM(require("@lancedb/lancedb"));
 var fs3 = __toESM(require("fs/promises"));
 var path5 = __toESM(require("path"));
 var os = __toESM(require("os"));
-var import_gray_matter = __toESM(require_gray_matter());
+var import_gray_matter2 = __toESM(require_gray_matter());
 var import_md52 = __toESM(require_md5());
 
 // node_modules/@xenova/transformers/src/utils/core.js
@@ -60284,6 +60284,7 @@ function buildEmbeddingInputs(relativePath, body, options2) {
 
 // src/utils.ts
 var path4 = __toESM(require("path"));
+var import_gray_matter = __toESM(require_gray_matter());
 function getSafeFilePath(vaultPath, userInputPath) {
   const resolvedVault = path4.resolve(vaultPath);
   const resolvedTarget = path4.resolve(resolvedVault, userInputPath);
@@ -60332,6 +60333,35 @@ function insertAtHeading(fileContent, heading, content, position, range3) {
 
 ## ${heading}
 ${content}`;
+}
+function listNotesPattern(subfolder) {
+  return subfolder ? path4.join(subfolder, "**", "*.md") : "**/*.md";
+}
+function replaceInNote(content, oldText, newText) {
+  const idx = content.indexOf(oldText);
+  if (idx === -1) throw new Error(`Text not found: "${oldText}"`);
+  return content.slice(0, idx) + newText + content.slice(idx + oldText.length);
+}
+function stripHeadingFromLink(link) {
+  const idx = link.indexOf("#");
+  return idx === -1 ? link : link.slice(0, idx);
+}
+function applyFrontmatterUpdate(fileContent, update) {
+  const parsed = (0, import_gray_matter.default)(fileContent);
+  if (update.updates) {
+    for (const [k, v] of Object.entries(update.updates)) {
+      if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
+      parsed.data[k] = v;
+    }
+  } else {
+    let value = update.value;
+    try {
+      value = JSON.parse(String(update.value));
+    } catch {
+    }
+    parsed.data[update.key] = value;
+  }
+  return import_gray_matter.default.stringify(parsed.content, parsed.data);
 }
 
 // src/rag/store.ts
@@ -60411,7 +60441,7 @@ var VaultIndexer = class {
     const filePath = getSafeFilePath(vaultPath, relativePath);
     try {
       const content = await fs3.readFile(filePath, "utf-8");
-      const { data, content: body } = (0, import_gray_matter.default)(content);
+      const { data, content: body } = (0, import_gray_matter2.default)(content);
       const { textsToEmbed, chunkMetadata } = buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
       if (textsToEmbed.length > 0) {
         const chunks = await this.embedWithFallback(embedder, textsToEmbed, chunkMetadata);
@@ -60494,7 +60524,7 @@ var VaultIndexer = class {
               return null;
             }
             changedPaths.push(relativePath);
-            const { content: body } = (0, import_gray_matter.default)(content);
+            const { content: body } = (0, import_gray_matter2.default)(content);
             return buildEmbeddingInputs(relativePath, body, chunkingOptionsFromEnv());
           } catch (err) {
             console.error(`Failed to process file ${filePath}:`, err);
@@ -60704,7 +60734,7 @@ async function readStdin() {
     VAULT_PATH = await loadConfig2();
   }
   const args = process.argv.slice(2);
-  const knownTools = ["obsidian_list_notes", "obsidian_read_note", "obsidian_search_notes", "obsidian_rag_index", "obsidian_rag_query", "obsidian_set_vault", "obsidian_create_note", "obsidian_append_note", "obsidian_get_daily_note", "obsidian_get_backlinks", "obsidian_get_links", "obsidian_move_note", "obsidian_update_frontmatter", "obsidian_append_daily_log", "obsidian_replace_section", "obsidian_insert_at_heading"];
+  const knownTools = ["obsidian_list_notes", "obsidian_read_note", "obsidian_search_notes", "obsidian_rag_index", "obsidian_rag_query", "obsidian_set_vault", "obsidian_create_note", "obsidian_append_note", "obsidian_get_daily_note", "obsidian_get_backlinks", "obsidian_get_links", "obsidian_move_note", "obsidian_update_frontmatter", "obsidian_append_daily_log", "obsidian_replace_section", "obsidian_insert_at_heading", "obsidian_replace_in_note", "obsidian_get_broken_links", "validate_frontmatter"];
   if (args.length > 0 && knownTools.includes(args[0])) {
     const toolName = args[0];
     const toolArgs = args.slice(1);
@@ -60724,8 +60754,7 @@ async function readStdin() {
       let result;
       if (toolName === "obsidian_list_notes") {
         const vp = getVaultPath(parsedArgs.vault_path);
-        const sub = parsedArgs.subfolder ? String(parsedArgs.subfolder) : "**";
-        const pattern = path6.join(sub, "*.md");
+        const pattern = listNotesPattern(parsedArgs.subfolder ? String(parsedArgs.subfolder) : void 0);
         const files = await glob(pattern, { cwd: vp, follow: true });
         result = JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `
 ...and ${files.length - 100} more.` : "");
@@ -60785,11 +60814,14 @@ async function readStdin() {
         if (parsedArgs.hook) {
           const inputStr = await readStdin();
           if (!inputStr) {
-            process.exit(1);
+            process.exit(0);
           }
           const input = JSON.parse(inputStr);
           vp = getVaultPath(input.tool_input?.vault_path || VAULT_PATH);
           fp = input.tool_input?.file_path;
+          if (!fp) {
+            process.exit(0);
+          }
         } else {
           vp = getVaultPath(parsedArgs.vault_path);
           fp = parsedArgs.file_path ? String(parsedArgs.file_path) : null;
@@ -60848,18 +60880,16 @@ Content: ${r.text}`).join("\n---\n");
       } else if (toolName === "obsidian_update_frontmatter") {
         const vp = getVaultPath(parsedArgs.vault_path);
         const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
-        const key = String(parsedArgs.key);
-        let value = parsedArgs.value;
-        try {
-          value = JSON.parse(String(parsedArgs.value));
-        } catch (e) {
-        }
         const fileContent = await fs4.readFile(filePath, "utf-8");
-        const parsed = (0, import_gray_matter2.default)(fileContent);
-        parsed.data[key] = value;
-        const updatedContent = import_gray_matter2.default.stringify(parsed.content, parsed.data);
-        await fs4.writeFile(filePath, updatedContent, "utf-8");
-        result = `Updated frontmatter "${key}" in ${parsedArgs.file_path}`;
+        let updateArg;
+        if (parsedArgs.updates) {
+          const updates = typeof parsedArgs.updates === "string" ? JSON.parse(parsedArgs.updates) : parsedArgs.updates;
+          updateArg = { updates };
+        } else {
+          updateArg = { key: String(parsedArgs.key), value: String(parsedArgs.value) };
+        }
+        await fs4.writeFile(filePath, applyFrontmatterUpdate(fileContent, updateArg), "utf-8");
+        result = `Updated frontmatter in ${parsedArgs.file_path}`;
       } else if (toolName === "obsidian_replace_section") {
         const vp = getVaultPath(parsedArgs.vault_path);
         const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
@@ -60910,6 +60940,91 @@ Content: ${r.text}`).join("\n---\n");
         }
         await fs4.writeFile(filePath, fileContent, "utf-8");
         result = `Appended to daily note under "${heading}"`;
+      } else if (toolName === "obsidian_replace_in_note") {
+        const vp = getVaultPath(parsedArgs.vault_path);
+        const filePath = getSafeFilePath(vp, String(parsedArgs.file_path));
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const updated = replaceInNote(fileContent, String(parsedArgs.old_text), String(parsedArgs.new_text ?? ""));
+        await fs4.writeFile(filePath, updated, "utf-8");
+        result = `Replaced text in ${parsedArgs.file_path}`;
+      } else if (toolName === "obsidian_get_broken_links") {
+        const vp = getVaultPath(parsedArgs.vault_path);
+        const pattern = listNotesPattern(parsedArgs.subfolder ? String(parsedArgs.subfolder) : void 0);
+        const files = await glob(pattern, { cwd: vp, follow: true });
+        const allFiles = await glob("**/*.md", { cwd: vp, follow: true });
+        const nameSet = new Set(allFiles.map((f) => path6.basename(f, ".md").toLowerCase()));
+        const targetMap = /* @__PURE__ */ new Map();
+        for (const f of files) {
+          const content = await fs4.readFile(path6.join(vp, f), "utf-8").catch(() => "");
+          for (const link of extractWikilinks(content)) {
+            const target = stripHeadingFromLink(link);
+            if (!target) continue;
+            const refs = targetMap.get(target) ?? [];
+            refs.push(f);
+            targetMap.set(target, refs);
+          }
+        }
+        const broken = [];
+        for (const [target, refs] of targetMap) {
+          if (!nameSet.has(target.toLowerCase())) {
+            broken.push({ target, refs });
+          }
+        }
+        result = broken.length === 0 ? "No broken links found." : `Found ${broken.length} broken link(s):
+${broken.map((entry) => `[[${entry.target}]] \u2014 in: ${entry.refs.join(", ")}`).join("\n")}`;
+      } else if (toolName === "validate_frontmatter") {
+        if (!parsedArgs.hook) {
+          process.exit(0);
+        }
+        const inputStr = await readStdin();
+        if (!inputStr) {
+          process.exit(0);
+        }
+        let input;
+        try {
+          input = JSON.parse(inputStr);
+        } catch {
+          process.exit(0);
+        }
+        const filePath = String(input.tool_input?.file_path ?? "");
+        const content = String(input.tool_input?.content ?? "");
+        if (!filePath || !content) {
+          process.exit(0);
+        }
+        let vp;
+        try {
+          vp = getVaultPath(input.tool_input?.vault_path || void 0);
+        } catch {
+          process.exit(0);
+        }
+        const schemaPaths = [
+          path6.join(vp, ".gemini-obsidian-schema.json"),
+          path6.join(vp, ".obsidian-rag-schema.json")
+        ];
+        let schema;
+        for (const schemaPath of schemaPaths) {
+          try {
+            schema = JSON.parse(await fs4.readFile(schemaPath, "utf-8"));
+            break;
+          } catch {
+          }
+        }
+        if (!schema) {
+          process.exit(0);
+        }
+        const matchingRule = (schema.rules ?? []).find((rule) => filePath.startsWith(rule.prefix));
+        if (!matchingRule) {
+          process.exit(0);
+        }
+        const parsed = (0, import_gray_matter3.default)(content);
+        const missing = matchingRule.required.filter((field) => !(field in parsed.data));
+        if (missing.length > 0) {
+          console.error(
+            `[gemini-obsidian] Blocked: "${filePath}" is missing required frontmatter fields: ${missing.join(", ")}`
+          );
+          process.exit(2);
+        }
+        process.exit(0);
       } else {
         console.error(`Unknown tool: ${toolName}`);
         process.exit(1);
@@ -61080,16 +61195,17 @@ Content: ${r.text}`).join("\n---\n");
         },
         {
           name: "obsidian_update_frontmatter",
-          description: "Update YAML frontmatter of a note safely.",
+          description: "Update YAML frontmatter of a note safely. Supports single key/value or batch updates.",
           inputSchema: {
             type: "object",
             properties: {
               file_path: { type: "string", description: "Relative path to the note" },
-              key: { type: "string", description: 'Frontmatter key to update (e.g., "status", "tags")' },
-              value: { type: "string", description: "New value for the key (JSON stringified if array/object)" },
+              key: { type: "string", description: "Frontmatter key to update (single-key mode)" },
+              value: { type: "string", description: "New value for the key (JSON stringified if array/object; single-key mode)" },
+              updates: { type: "object", description: "JSON object of key/value pairs to set at once (batch mode, alternative to key+value)" },
               vault_path: { type: "string", description: "Optional vault path override" }
             },
-            required: ["file_path", "key", "value"]
+            required: ["file_path"]
           }
         },
         {
@@ -61133,6 +61249,31 @@ Content: ${r.text}`).join("\n---\n");
             },
             required: ["file_path", "heading", "content"]
           }
+        },
+        {
+          name: "obsidian_replace_in_note",
+          description: "Replace the first occurrence of a specific text string in a note. Use for surgical inline edits, e.g. adding a wikilink to existing text.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              file_path: { type: "string", description: "Relative path to the note" },
+              old_text: { type: "string", description: "Exact text to find and replace" },
+              new_text: { type: "string", description: "Replacement text (default: empty string)" },
+              vault_path: { type: "string", description: "Optional vault path override" }
+            },
+            required: ["file_path", "old_text"]
+          }
+        },
+        {
+          name: "obsidian_get_broken_links",
+          description: "Find all wikilinks in the vault (or a subfolder) that point to non-existent notes. Returns broken links grouped by source file.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              subfolder: { type: "string", description: "Limit scan to this subfolder (optional; default: entire vault)" },
+              vault_path: { type: "string", description: "Optional vault path override" }
+            }
+          }
         }
       ]
     };
@@ -61147,8 +61288,7 @@ Content: ${r.text}`).join("\n---\n");
       }
       if (name2 === "obsidian_list_notes") {
         const vp = getVaultPath(args2?.vault_path);
-        const sub = args2?.subfolder ? String(args2.subfolder) : "**";
-        const pattern = path6.join(sub, "*.md");
+        const pattern = listNotesPattern(args2?.subfolder ? String(args2.subfolder) : void 0);
         const files = await glob(pattern, { cwd: vp, follow: true });
         return { content: [{ type: "text", text: JSON.stringify(files.slice(0, 100), null, 2) + (files.length > 100 ? `
 ...and ${files.length - 100} more.` : "") }] };
@@ -61278,18 +61418,10 @@ Content: ${r.text}
       if (name2 === "obsidian_update_frontmatter") {
         const vp = getVaultPath(args2?.vault_path);
         const filePath = getSafeFilePath(vp, String(args2?.file_path));
-        const key = String(args2?.key);
-        let value = args2?.value;
-        try {
-          value = JSON.parse(String(args2?.value));
-        } catch (e) {
-        }
         const fileContent = await fs4.readFile(filePath, "utf-8");
-        const parsed = (0, import_gray_matter2.default)(fileContent);
-        parsed.data[key] = value;
-        const updatedContent = import_gray_matter2.default.stringify(parsed.content, parsed.data);
-        await fs4.writeFile(filePath, updatedContent, "utf-8");
-        return { content: [{ type: "text", text: `Updated frontmatter "${key}" in ${args2?.file_path}` }] };
+        const updateArg = args2?.updates && typeof args2.updates === "object" ? { updates: args2.updates } : { key: String(args2?.key), value: String(args2?.value) };
+        await fs4.writeFile(filePath, applyFrontmatterUpdate(fileContent, updateArg), "utf-8");
+        return { content: [{ type: "text", text: `Updated frontmatter in ${args2?.file_path}` }] };
       }
       if (name2 === "obsidian_replace_section") {
         const vp = getVaultPath(args2?.vault_path);
@@ -61343,6 +61475,44 @@ Content: ${r.text}
         }
         await fs4.writeFile(filePath, fileContent, "utf-8");
         return { content: [{ type: "text", text: `Appended to daily note under "${heading}"` }] };
+      }
+      if (name2 === "obsidian_replace_in_note") {
+        const vp = getVaultPath(args2?.vault_path);
+        const filePath = getSafeFilePath(vp, String(args2?.file_path));
+        const fileContent = await fs4.readFile(filePath, "utf-8");
+        const updated = replaceInNote(fileContent, String(args2?.old_text), String(args2?.new_text ?? ""));
+        await fs4.writeFile(filePath, updated, "utf-8");
+        return { content: [{ type: "text", text: `Replaced text in ${args2?.file_path}` }] };
+      }
+      if (name2 === "obsidian_get_broken_links") {
+        const vp = getVaultPath(args2?.vault_path);
+        const pattern = listNotesPattern(args2?.subfolder ? String(args2.subfolder) : void 0);
+        const files = await glob(pattern, { cwd: vp, follow: true });
+        const allFiles = await glob("**/*.md", { cwd: vp, follow: true });
+        const nameSet = new Set(allFiles.map((f) => path6.basename(f, ".md").toLowerCase()));
+        const targetMap = /* @__PURE__ */ new Map();
+        for (const f of files) {
+          const content = await fs4.readFile(path6.join(vp, f), "utf-8").catch(() => "");
+          for (const link of extractWikilinks(content)) {
+            const target = stripHeadingFromLink(link);
+            if (!target) continue;
+            const refs = targetMap.get(target) ?? [];
+            refs.push(f);
+            targetMap.set(target, refs);
+          }
+        }
+        const broken = [];
+        for (const [target, refs] of targetMap) {
+          if (!nameSet.has(target.toLowerCase())) {
+            broken.push({ target, refs });
+          }
+        }
+        if (broken.length === 0) {
+          return { content: [{ type: "text", text: "No broken links found." }] };
+        }
+        const lines = broken.map((entry) => `[[${entry.target}]] \u2014 in: ${entry.refs.join(", ")}`).join("\n");
+        return { content: [{ type: "text", text: `Found ${broken.length} broken link(s):
+${lines}` }] };
       }
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name2}`);
     } catch (error2) {

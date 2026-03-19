@@ -1,4 +1,5 @@
 import * as path from 'path';
+import matter from 'gray-matter';
 
 /**
  * Resolve a user-supplied relative path against a vault root, ensuring
@@ -88,4 +89,42 @@ export function insertAtHeading(
     return before + sep + content + '\n' + fileContent.slice(range.bodyEnd);
   }
   return fileContent + `\n\n## ${heading}\n${content}`;
+}
+
+/** Build the glob pattern for obsidian_list_notes. Recurses into subfolder when given. */
+export function listNotesPattern(subfolder?: string): string {
+  return subfolder ? path.join(subfolder, '**', '*.md') : '**/*.md';
+}
+
+/** Replace the first occurrence of oldText with newText. Throws if not found. */
+export function replaceInNote(content: string, oldText: string, newText: string): string {
+  const idx = content.indexOf(oldText);
+  if (idx === -1) throw new Error(`Text not found: "${oldText}"`);
+  return content.slice(0, idx) + newText + content.slice(idx + oldText.length);
+}
+
+/** Strip the #heading fragment from a wikilink target. */
+export function stripHeadingFromLink(link: string): string {
+  const idx = link.indexOf('#');
+  return idx === -1 ? link : link.slice(0, idx);
+}
+
+type FrontmatterUpdate =
+  | { key: string; value: string; updates?: never }
+  | { updates: Record<string, unknown>; key?: never; value?: never };
+
+/** Apply a single key/value or a batch of updates to YAML frontmatter. Returns updated file content. */
+export function applyFrontmatterUpdate(fileContent: string, update: FrontmatterUpdate): string {
+  const parsed = matter(fileContent);
+  if (update.updates) {
+    for (const [k, v] of Object.entries(update.updates)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      parsed.data[k] = v;
+    }
+  } else {
+    let value: unknown = update.value;
+    try { value = JSON.parse(String(update.value)); } catch { /* use as string */ }
+    parsed.data[update.key] = value;
+  }
+  return matter.stringify(parsed.content, parsed.data);
 }
