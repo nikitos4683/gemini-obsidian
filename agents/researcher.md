@@ -6,7 +6,7 @@ description: >-
   answers from the Obsidian vault.
 kind: local
 tools:
-  - gemini-obsidian_*
+  - mcp_gemini-obsidian_*
 max_turns: 30
 timeout_mins: 10
 ---
