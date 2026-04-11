@@ -130,6 +130,7 @@ export class VaultIndexer {
               await this.table.delete(`path = '${relativePath.replace(/'/g, "''")}'`);
               await this.table.add(chunkRows);
           }
+          await this.table.optimize();
           console.error(`Indexed ${chunks.length} chunks for ${relativePath}.`);
           return { success: true, chunks: chunks.length };
       }
@@ -352,6 +353,11 @@ export class VaultIndexer {
       if (pendingChunks.length > 0) {
         await persistChunks(pendingChunks);
       }
+    }
+
+    // Compact fragments and clean up old versions to prevent stale references
+    if (this.table) {
+      await this.table.optimize();
     }
 
     // Save updated hashes
