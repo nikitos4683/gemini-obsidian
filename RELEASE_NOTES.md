@@ -1,3 +1,20 @@
+# Release v1.7.1
+
+## Summary
+Fixes hook execution on Windows by replacing the three bash hook wrappers with Node.js equivalents, hardens those wrappers against OS-level spawn failures, and bumps a dev dependency.
+
+## Bug Fixes
+- **Windows hook execution** — `bash` is not guaranteed on Windows. The `session-init`, `validate-frontmatter`, and `reindex-note` hooks now run via `node`, matching the cross-platform contract already used by the MCP server entrypoint.
+- **Hook spawn hardening** — added `'error'` event handlers to the spawned child process in `reindex-note.js` and `validate-frontmatter.js`. Without these, an OS-level spawn failure (e.g. EMFILE) would emit an unhandled event and crash the hook instead of degrading gracefully.
+
+## Removed
+- Old `scripts/*.sh` wrappers — superseded by the `.js` versions wired into `hooks/hooks.json`.
+
+## Build & Maintenance
+- `hono` (dev) bumped from 4.12.12 → 4.12.14.
+
+---
+
 # Release v1.7.0
 
 ## Summary

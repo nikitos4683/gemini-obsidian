@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1] - 2026-04-20
+
+### Fixed
+
+- Windows hook execution — replaced bash hook wrappers (`session-init.sh`, `validate-frontmatter.sh`, `reindex-note.sh`) with Node.js equivalents so hooks run on Windows where `bash` is not guaranteed
+- Hardened hook wrappers against OS-level `spawn` failures by handling child process `error` events (prevents unhandled-event crashes)
+
+### Removed
+
+- Old bash hook wrappers under `scripts/` (replaced by `.js` equivalents)
+
+### Build & Maintenance
+
+- build(deps-dev): bump hono from 4.12.12 to 4.12.14
+
 ## [1.7.0] - 2026-04-11
 
 ### Added
