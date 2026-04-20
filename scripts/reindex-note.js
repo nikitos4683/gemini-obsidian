@@ -31,6 +31,11 @@ async function main() {
   }
   child.stdin.end();
 
+  child.on('error', () => {
+    process.stdout.write('{}\n');
+    process.exit(0);
+  });
+
   child.on('close', () => {
     process.stdout.write('{}\n');
     process.exit(0);

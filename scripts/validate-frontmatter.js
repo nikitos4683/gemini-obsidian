@@ -31,6 +31,10 @@ async function main() {
   }
   child.stdin.end();
 
+  child.on('error', () => {
+    process.exit(1);
+  });
+
   child.on('close', (code) => {
     if ((code ?? 1) === 0) {
       process.stdout.write('{}\n');
