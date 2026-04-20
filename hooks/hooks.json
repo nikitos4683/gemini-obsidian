@@ -7,7 +7,7 @@
           {
             "name": "obsidian-session-init",
             "type": "command",
-            "command": "bash ${extensionPath}/scripts/session-init.sh",
+            "command": "node ${extensionPath}/scripts/session-init.js",
             "timeout": 120000,
             "description": "Reports vault status and refreshes the RAG index when a Gemini session starts."
           }
@@ -21,7 +21,7 @@
           {
             "name": "obsidian-validate-frontmatter",
             "type": "command",
-            "command": "bash ${extensionPath}/scripts/validate-frontmatter.sh",
+            "command": "node ${extensionPath}/scripts/validate-frontmatter.js",
             "timeout": 10000,
             "description": "Blocks note creation when required frontmatter fields are missing."
           }
@@ -35,7 +35,7 @@
           {
             "name": "obsidian-reindex",
             "type": "command",
-            "command": "bash ${extensionPath}/scripts/reindex-note.sh",
+            "command": "node ${extensionPath}/scripts/reindex-note.js",
             "timeout": 30000,
             "description": "Re-indexes only the changed note after it is created or modified."
           }
